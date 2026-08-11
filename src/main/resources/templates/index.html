@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Witbank Elite Car Wash | Premium Service</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        /* ── Slot picker ────────────────────────────────────── */
+        .slot-section { margin-top:14px; }
+        .slot-label   { font-size:0.75rem; text-transform:uppercase; letter-spacing:1px;
+                        color:rgba(255,255,255,0.5); margin-bottom:10px; display:block; }
+        .date-row     { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:14px; }
+        .date-row input[type=date] {
+            padding:11px 14px; background:rgba(255,255,255,0.07);
+            border:1px solid rgba(255,255,255,0.15); border-radius:10px;
+            color:white; font-family:'Outfit',sans-serif; font-size:0.95rem; flex:1; min-width:160px; }
+        .slot-grid    { display:grid; grid-template-columns:repeat(auto-fill,minmax(90px,1fr)); gap:8px; }
+        .slot-btn     { padding:9px 6px; border-radius:9px; border:1px solid rgba(255,255,255,0.12);
+                        background:rgba(255,255,255,0.04); color:rgba(255,255,255,0.7);
+                        font-family:'Outfit',sans-serif; font-size:0.82rem; cursor:pointer;
+                        transition:0.15s; text-align:center; }
+        .slot-btn:hover:not(:disabled)  { border-color:#00d2ff; color:#00d2ff; background:rgba(0,210,255,0.08); }
+        .slot-btn.selected              { background:linear-gradient(135deg,#00d2ff,#0099bb);
+                                         color:#000; border-color:transparent; font-weight:700; }
+        .slot-btn:disabled, .slot-btn.full {
+                                          background:rgba(255,77,77,0.06); border-color:rgba(255,77,77,0.2);
+                                          color:rgba(255,77,77,0.4); cursor:not-allowed; }
+        .slot-legend  { display:flex; gap:14px; margin-top:10px; font-size:0.75rem;
+                        color:rgba(255,255,255,0.4); flex-wrap:wrap; }
+        .leg-dot      { width:10px; height:10px; border-radius:50%; display:inline-block; margin-right:5px; }
+        .slot-loading { text-align:center; padding:20px; color:rgba(255,255,255,0.4); font-size:0.85rem; }
+        #slotContainer { min-height:60px; }
+
+        /* ── Payment modal ──────────────────────────────────── */
+        .pay-modal    { display:none; position:fixed; inset:0; z-index:9999;
+                        background:rgba(0,0,0,0.75); backdrop-filter:blur(8px);
+                        align-items:center; justify-content:center; }
+        .pay-modal.open { display:flex; }
+        .pay-card     { background:#151c2c; border:1px solid rgba(255,255,255,0.1);
+                        border-radius:20px; padding:36px 32px; width:100%; max-width:440px; }
+        .pay-card h3  { margin:0 0 6px; font-size:1.2rem; }
+        .pay-card p   { color:rgba(255,255,255,0.5); font-size:0.86rem; margin:0 0 24px; }
+        .pay-summary  { background:rgba(255,255,255,0.05); border-radius:12px;
+                        padding:16px 18px; margin-bottom:22px; }
+        .pay-row      { display:flex; justify-content:space-between; font-size:0.88rem;
+                        padding:5px 0; color:rgba(255,255,255,0.7); }
+        .pay-row.total { font-size:1.1rem; font-weight:800; color:white;
+                         border-top:1px solid rgba(255,255,255,0.1); padding-top:12px; margin-top:6px; }
+        .pay-row.total span { color:#00d2ff; }
+        .yoco-btn     { width:100%; padding:14px; background:linear-gradient(135deg,#00d2ff,#0066ff);
+                        border:none; border-radius:12px; color:white; font-family:'Outfit',sans-serif;
+                        font-weight:700; font-size:1rem; cursor:pointer; transition:0.2s; margin-bottom:10px; }
+        .yoco-btn:hover { transform:translateY(-1px); box-shadow:0 8px 20px rgba(0,102,255,0.35); }
+        .skip-btn     { width:100%; padding:11px; background:transparent;
+                        border:1px solid rgba(255,255,255,0.12); border-radius:12px;
+                        color:rgba(255,255,255,0.5); font-family:'Outfit',sans-serif;
+                        font-size:0.88rem; cursor:pointer; }
+        .skip-btn:hover { border-color:rgba(255,255,255,0.25); color:rgba(255,255,255,0.75); }
+        .pay-icon     { font-size:2.5rem; margin-bottom:12px; }
+        .pay-badge    { display:inline-block; background:rgba(0,210,255,0.1);
+                        border:1px solid rgba(0,210,255,0.25); border-radius:6px;
+                        padding:3px 10px; font-size:0.72rem; color:#00d2ff; margin-bottom:16px; }
+
+        /* ── Discount badge ─────────────────────────────────── */
+        .discount-chip { display:inline-block; background:rgba(77,255,77,0.1);
+                         border:1px solid rgba(77,255,77,0.25); color:#4dff4d;
+                         padding:4px 12px; border-radius:20px; font-size:0.78rem; font-weight:600; }
+        .pay-status-chip { display:inline-block; padding:4px 12px; border-radius:20px;
+                           font-size:0.78rem; font-weight:700; }
+        .pay-paid   { background:rgba(77,255,77,0.12);  color:#4dff4d; }
+        .pay-arrival { background:rgba(255,170,0,0.12); color:#ffaa00; }
+    </style>
+</head>
+<body>
+
+<!-- ── Navigation ─────────────────────────────────────────────── -->
+<nav class="glass-nav">
+    <div class="logo">WITBANK <span>ELITE</span></div>
+    <ul class="nav-links">
+        <li><a href="#services">Services</a></li>
+        <li><a href="#booking">Book Now</a></li>
+        <li th:if="${loggedInCustomer != null}">
+            <a href="/customer/dashboard" style="color:#00d2ff;">
+                👤 <span th:text="${loggedInCustomer.fullName.split(' ')[0]}">Me</span>
+                <span th:if="${isVip}" style="font-size:0.75rem;">⭐</span>
+            </a>
+        </li>
+        <li th:unless="${loggedInCustomer != null}">
+            <a href="/customer/login" style="color:#00d2ff;">My Account</a>
+        </li>
+    </ul>
+</nav>
+
+<!-- ── Hero ───────────────────────────────────────────────────── -->
+<section class="hero"
+         style="background:linear-gradient(rgba(0,0,0,0.5),rgba(0,0,0,0.8)),
+                url('/images/hero.png') no-repeat center center/cover;">
+    <div class="hero-content">
+        <h1 class="animate-up">Beyond Clean. <span>Pure Perfection.</span></h1>
+        <p class="animate-up delay-1">Witbank's premier automotive spa experience.</p>
+        <div class="hero-btns animate-up delay-2">
+            <a href="#booking" class="btn btn-primary">Book an Appointment</a>
+            <a href="#services" class="btn btn-outline">View Packages</a>
+        </div>
+    </div>
+</section>
+
+<!-- ── Service Packages ───────────────────────────────────────── -->
+<section id="services" class="services">
+    <h2 class="section-title">Our Premium <span>Packages</span></h2>
+    <div class="service-grid">
+        <div th:each="service : ${services}"
+             th:classappend="${service.id == 'elite' ? 'featured' : ''}"
+             class="service-card glass">
+            <div class="service-icon" th:text="${service.icon}">🚿</div>
+            <h3 th:text="${service.name}">Name</h3>
+            <p th:text="${service.description}">Desc</p>
+            <div class="price" th:text="${'R' + service.price}">R0</div>
+        </div>
+    </div>
+</section>
+
+<!-- ── Booking ────────────────────────────────────────────────── -->
+<section id="booking" class="booking">
+    <div class="booking-container glass">
+        <div class="booking-header">
+            <h2>Reserve Your <span>Slot</span></h2>
+            <p>Choose a date, pick an available time, and pay securely.</p>
+        </div>
+
+        <!-- ── Confirmation ──────────────────────────────────── -->
+        <div th:if="${message}" class="confirmation-panel">
+            <div class="confirmation-icon">✅</div>
+            <p class="confirmation-msg" th:text="${message}"></p>
+
+            <div class="notification-log">
+                <span class="log-title">Booking details:</span>
+                <div th:if="${bookedVehicle != null and !bookedVehicle.isEmpty()}" class="log-entry">
+                    <span class="log-badge" style="background:rgba(168,85,247,0.15);color:#a855f7;">🚗 Vehicle</span>
+                    <span th:text="${bookedVehicle}">-</span>
+                    <a href="/vehicle/history" style="font-size:0.75rem;color:#00d2ff;margin-left:8px;text-decoration:none;">View History →</a>
+                </div>
+                <div th:if="${bookedCellphone != null and !bookedCellphone.isEmpty()}" class="log-entry">
+                    <span class="log-badge sms-badge">📱 SMS</span>
+                    <span>Sent to <strong th:text="${bookedCellphone}"></strong></span>
+                </div>
+                <div th:if="${bookedEmail != null and !bookedEmail.isEmpty()}" class="log-entry">
+                    <span class="log-badge email-badge">📧 Email</span>
+                    <span>Slip sent to <strong th:text="${bookedEmail}"></strong></span>
+                    <span id="emailjs-status" style="margin-left:8px;font-size:0.78rem;color:rgba(255,255,255,0.4);">Sending…</span>
+                </div>
+                <div class="log-entry">
+                    <span class="log-badge" style="background:rgba(0,210,255,0.15);color:#00d2ff;">💳 Payment</span>
+                    <span th:text="${paymentStatus}">-</span>
+                    <span th:if="${paymentStatus == 'Paid via Yoco'}"
+                          class="pay-status-chip pay-paid">✓ PAID</span>
+                    <span th:unless="${paymentStatus == 'Paid via Yoco'}"
+                          class="pay-status-chip pay-arrival">Pay at arrival</span>
+                </div>
+            </div>
+
+            <div th:if="${discountApplied}"
+                 style="margin:12px 0;background:rgba(77,255,77,0.08);border:1px solid rgba(77,255,77,0.2);
+                        border-radius:10px;padding:10px 16px;font-size:0.86rem;color:#4dff4d;">
+                🎉 VIP 10% loyalty discount applied!
+            </div>
+
+            <div th:if="${bookingId != null and bookingId > 0}" style="margin-top:18px;">
+                <a th:href="@{/booking/slip/{id}(id=${bookingId})}" target="_blank"
+                   style="display:inline-block;background:linear-gradient(135deg,#00d2ff,#0099bb);
+                          color:#000;padding:11px 26px;border-radius:50px;font-weight:700;
+                          text-decoration:none;font-size:0.9rem;">
+                    🖨️ Print / Download Booking Slip
+                </a>
+            </div>
+        </div>
+
+        <!-- ── Validation error ───────────────────────────────── -->
+        <div th:if="${formError}"
+             style="background:rgba(255,77,77,0.1);border:1px solid rgba(255,77,77,0.3);
+                    color:#ff6b6b;padding:13px 18px;border-radius:12px;margin-bottom:18px;font-size:0.9rem;">
+            ⚠️ <span th:text="${formError}"></span>
+        </div>
+
+        <!-- ── Booking form (multi-step) ──────────────────────── -->
+        <form id="bookingForm" action="/book" method="POST" class="booking-form">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+            <!-- Hidden fields populated by JS -->
+            <input type="hidden" name="yocoToken"     id="yocoTokenInput"     value="">
+            <input type="hidden" name="paymentSkipped" id="paymentSkippedInput" value="false">
+
+            <!-- Step 1: details -->
+            <div class="form-group">
+                <input type="text" name="name" id="inputName" placeholder="Full Name"
+                       th:value="${loggedInCustomer?.fullName}" required>
+            </div>
+            <div class="form-group">
+                <input type="tel" name="cellphone" id="inputPhone" placeholder="Cellphone (e.g. 0812345678)"
+                       th:value="${loggedInCustomer?.cellphone}" required>
+            </div>
+            <div class="form-group">
+                <input type="email" name="email" id="inputEmail" placeholder="Email Address"
+                       th:value="${loggedInCustomer?.email}" required>
+            </div>
+            <div class="form-group">
+                <input type="text" name="vehicleReg" id="inputVehicleReg"
+                       placeholder="Vehicle Registration (e.g. MP 123-456)"
+                       style="text-transform:uppercase;"
+                       oninput="this.value=this.value.toUpperCase()">
+            </div>
+            <div class="form-group">
+                <select name="service" id="serviceSelect" required onchange="updatePaySummary()">
+                    <option value="" disabled selected>Select Service Package</option>
+                    <option th:each="svc : ${services}"
+                            th:value="${svc.name}"
+                            th:text="${svc.name + ' — R' + svc.price}"
+                            th:attr="data-price=${svc.price}"></option>
+                </select>
+            </div>
+
+            <!-- Weather widget (no API key needed — Open-Meteo) -->
+            <div id="weatherWidget"
+                 style="background:rgba(0,210,255,0.06);border:1px solid rgba(0,210,255,0.15);
+                        border-radius:12px;padding:13px 16px;margin-bottom:14px;
+                        display:flex;align-items:center;gap:12px;font-size:0.85rem;">
+                <span id="weatherIcon" style="font-size:1.6rem;">🌤️</span>
+                <div>
+                    <div id="weatherDesc" style="font-weight:600;color:#00d2ff;">Checking weather…</div>
+                    <div id="weatherTemp" style="font-size:0.78rem;color:rgba(255,255,255,0.5);">eMalahleni, Mpumalanga</div>
+                    <div id="weatherTip"  style="font-size:0.78rem;color:rgba(255,255,255,0.6);margin-top:3px;"></div>
+                </div>
+            </div>
+
+            <!-- Step 2: date + slot picker -->
+            <div class="slot-section">
+                <span class="slot-label">📅 Select Date &amp; Time</span>
+                <div class="date-row">
+                    <input type="date" id="datePicker"
+                           th:attr="min=${#temporals.format(#temporals.createNow(), 'yyyy-MM-dd')}"
+                           onchange="loadSlots(this.value)">
+                </div>
+                <div id="slotContainer">
+                    <div class="slot-loading">Choose a date above to see available times.</div>
+                </div>
+                <div class="slot-legend">
+                    <span><span class="leg-dot" style="background:#00d2ff;"></span>Available</span>
+                    <span><span class="leg-dot" style="background:#ff4d4d;"></span>Full</span>
+                    <span><span class="leg-dot" style="background:#00d2ff;border:2px solid #000;"></span>Selected</span>
+                </div>
+                <!-- Hidden time field submitted with form -->
+                <input type="hidden" name="time" id="selectedTime" required>
+            </div>
+
+            <!-- Trigger payment modal, not direct submit -->
+            <button type="button" class="btn btn-primary full-width"
+                    style="margin-top:20px;" onclick="openPayModal()">
+                Proceed to Payment →
+            </button>
+        </form>
+    </div>
+</section>
+
+<!-- ── Yoco Payment Modal ────────────────────────────────────── -->
+<div class="pay-modal" id="payModal">
+    <div class="pay-card">
+        <div class="pay-icon">💳</div>
+        <div class="pay-badge">🔒 Secured by Yoco</div>
+        <h3>Complete Payment</h3>
+        <p>Pay now to secure your booking instantly.</p>
+
+        <div class="pay-summary">
+            <div class="pay-row"><span>Service</span>    <span id="sumService">-</span></div>
+            <div class="pay-row"><span>Date &amp; Time</span><span id="sumTime">-</span></div>
+            <div class="pay-row total"><span>Total</span><span id="sumPrice">R0</span></div>
+        </div>
+
+        <!-- Yoco popup trigger -->
+        <button class="yoco-btn" id="yocoPayBtn" onclick="triggerYoco()">
+            💳 Pay with Yoco
+        </button>
+        <button class="skip-btn" onclick="skipPayment()">
+            Pay on Arrival instead →
+        </button>
+        <button class="skip-btn" style="margin-top:6px;border:none;color:rgba(255,255,255,0.3);"
+                onclick="closePayModal()">✕ Cancel</button>
+    </div>
+</div>
+
+<!-- ── Footer ────────────────────────────────────────────────── -->
+<footer class="glass-footer">
+    <div style="width:100%;height:260px;overflow:hidden;border-bottom:1px solid rgba(255,255,255,0.07);">
+        <iframe
+            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3582.9!2d29.2318!3d-25.8706!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x1ee9e9e9e9e9e9e9%3A0x1!2sHighveld+Street%2C+eMalahleni%2C+Mpumalanga!5e0!3m2!1sen!2sza!4v1700000000000"
+            width="100%" height="260"
+            style="border:0;filter:grayscale(30%) invert(92%) hue-rotate(180deg);"
+            allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"
+            title="Witbank Elite Car Wash Location">
+        </iframe>
+    </div>
+    <div class="footer-content">
+        <div class="footer-info">
+            <h3>Witbank Elite Car Wash</h3>
+            <p>📍 123 Highveld Street, eMalahleni (Witbank), Mpumalanga</p>
+            <p>🕐 Open Daily: 08:00 – 18:00 &nbsp;|&nbsp; 📞 013 000 0000</p>
+            <p>📧 info@witbankelite.co.za</p>
+            <p style="margin-top:8px;">
+                <a href="https://maps.google.com/?q=Highveld+Street+eMalahleni+Mpumalanga"
+                   target="_blank" style="color:#00d2ff;font-size:0.82rem;text-decoration:none;">
+                    🗺️ Open in Google Maps →
+                </a>
+            </p>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;">
+                <a href="/customer/register"
+                   style="color:#00d2ff;text-decoration:none;font-size:0.82rem;
+                          background:rgba(0,210,255,0.1);border:1px solid rgba(0,210,255,0.2);
+                          padding:6px 14px;border-radius:20px;">👤 Customer Account</a>
+                <a href="/vehicle/history"
+                   style="color:rgba(255,255,255,0.6);text-decoration:none;font-size:0.82rem;
+                          background:rgba(168,85,247,0.08);border:1px solid rgba(168,85,247,0.2);
+                          padding:6px 14px;border-radius:20px;">🚗 Vehicle History</a>
+                <a href="/staff/login"
+                   style="color:rgba(255,255,255,0.5);text-decoration:none;font-size:0.82rem;
+                          background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);
+                          padding:6px 14px;border-radius:20px;">🔐 Staff Portal</a>
+            </div>
+        </div>
+        <div class="footer-legal"><p>&copy; 2026 Witbank Elite. Developed for INT316D.</p></div>
+    </div>
+</footer>
+
+<!-- ── Scripts ────────────────────────────────────────────────── -->
+
+<!-- Yoco Popup SDK -->
+<script src="https://js.yoco.com/sdk/v1/yoco-sdk-web.js"></script>
+
+<!-- EmailJS -->
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+
+<script th:inline="javascript">
+/*<![CDATA[*/
+
+// ── Yoco public key — replace with your own from dashboard.yoco.com ──────────
+var YOCO_PUBLIC_KEY = 'pk_test_ed3c54a6gOol4Jkr1e02';
+// ─────────────────────────────────────────────────────────────────────────────
+
+var yoco = new YocoSDK({ publicKey: YOCO_PUBLIC_KEY });
+var selectedSlotTime = '';
+var selectedPrice    = 0;
+
+// ── Slot picker ───────────────────────────────────────────────────────────────
+function loadSlots(dateStr) {
+    var container = document.getElementById('slotContainer');
+    container.innerHTML = '<div class="slot-loading">⏳ Loading availability…</div>';
+
+    fetch('/api/availability?date=' + dateStr)
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            var html = '<div class="slot-grid">';
+            data.slots.forEach(function(slot) {
+                if (slot.available) {
+                    html += '<button type="button" class="slot-btn" onclick="selectSlot(\'' +
+                            dateStr + 'T' + slot.time + '\',this)">' +
+                            slot.time + '<br><span style="font-size:0.68rem;opacity:0.6;">' +
+                            slot.left + ' bay' + (slot.left > 1 ? 's' : '') + '</span></button>';
+                } else {
+                    html += '<button type="button" class="slot-btn full" disabled>' +
+                            slot.time + '<br><span style="font-size:0.68rem;">Full</span></button>';
+                }
+            });
+            html += '</div>';
+            container.innerHTML = html;
+        })
+        .catch(function() {
+            container.innerHTML = '<div class="slot-loading" style="color:#ff6b6b;">⚠ Could not load slots. Please try again.</div>';
+        });
+}
+
+function selectSlot(datetime, btn) {
+    document.querySelectorAll('.slot-btn').forEach(function(b) { b.classList.remove('selected'); });
+    btn.classList.add('selected');
+    selectedSlotTime = datetime;
+    document.getElementById('selectedTime').value = datetime;
+    updatePaySummary();
+}
+
+// ── Payment modal ─────────────────────────────────────────────────────────────
+function updatePaySummary() {
+    var sel   = document.getElementById('serviceSelect');
+    var opt   = sel.options[sel.selectedIndex];
+    selectedPrice = opt ? (parseFloat(opt.getAttribute('data-price')) || 0) : 0;
+    document.getElementById('sumService').textContent = opt && opt.value ? opt.text : '-';
+    document.getElementById('sumTime').textContent    = selectedSlotTime
+        ? selectedSlotTime.replace('T', ' ') : 'Not selected';
+    document.getElementById('sumPrice').textContent   = 'R' + selectedPrice.toFixed(2);
+}
+
+function openPayModal() {
+    // Validate fields first
+    var name     = document.getElementById('inputName').value.trim();
+    var email    = document.getElementById('inputEmail').value.trim();
+    var phone    = document.getElementById('inputPhone').value.trim();
+    var service  = document.getElementById('serviceSelect').value;
+    var time     = document.getElementById('selectedTime').value;
+
+    if (name.length < 2)   { alert('Please enter your full name.'); return; }
+    if (!service)           { alert('Please select a service package.'); return; }
+    if (!time)              { alert('Please select a date and time slot.'); return; }
+    if (!email && !phone)   { alert('Please enter an email or cellphone.'); return; }
+
+    updatePaySummary();
+    document.getElementById('payModal').classList.add('open');
+}
+
+function closePayModal() {
+    document.getElementById('payModal').classList.remove('open');
+}
+
+function triggerYoco() {
+    var btn = document.getElementById('yocoPayBtn');
+    btn.disabled    = true;
+    btn.textContent = '⏳ Opening payment…';
+
+    yoco.showPopup({
+        amountInCents: Math.round(selectedPrice * 100),
+        currency:      'ZAR',
+        name:          'Witbank Elite Car Wash',
+        description:   document.getElementById('serviceSelect').value + ' booking',
+        callback: function(result) {
+            btn.disabled    = false;
+            btn.textContent = '💳 Pay with Yoco';
+
+            if (result.error) {
+                alert('Payment failed: ' + result.error.message);
+                return;
+            }
+            // Payment succeeded — store token and submit form
+            document.getElementById('yocoTokenInput').value     = result.id || 'YOCO_PAID';
+            document.getElementById('paymentSkippedInput').value = 'false';
+            closePayModal();
+            document.getElementById('bookingForm').submit();
+        }
+    });
+}
+
+function skipPayment() {
+    document.getElementById('yocoTokenInput').value      = '';
+    document.getElementById('paymentSkippedInput').value = 'true';
+    closePayModal();
+    document.getElementById('bookingForm').submit();
+}
+
+// Close modal on backdrop click
+document.getElementById('payModal').addEventListener('click', function(e) {
+    if (e.target === this) closePayModal();
+});
+
+// ── Weather (Open-Meteo — free, no API key) ───────────────────────────────────
+(function fetchWeather() {
+    // eMalahleni / Witbank coordinates
+    var lat = -25.87, lon = 29.23;
+    var url = 'https://api.open-meteo.com/v1/forecast?latitude=' + lat +
+              '&longitude=' + lon +
+              '&current=temperature_2m,weathercode,windspeed_10m&timezone=Africa%2FJohannesburg';
+
+    fetch(url).then(function(r) { return r.json(); }).then(function(d) {
+        var c    = d.current;
+        var code = c.weathercode;
+        var temp = Math.round(c.temperature_2m);
+        var wind = Math.round(c.windspeed_10m);
+
+        // WMO weather codes → emoji + description
+        var weatherMap = [
+            [0,  '☀️',  'Clear skies'],
+            [1,  '🌤️', 'Mainly clear'],
+            [2,  '⛅',  'Partly cloudy'],
+            [3,  '☁️',  'Overcast'],
+            [45, '🌫️', 'Foggy'],
+            [48, '🌫️', 'Icy fog'],
+            [51, '🌦️', 'Light drizzle'],
+            [53, '🌧️', 'Drizzle'],
+            [55, '🌧️', 'Heavy drizzle'],
+            [61, '🌧️', 'Light rain'],
+            [63, '🌧️', 'Rain'],
+            [65, '🌧️', 'Heavy rain'],
+            [80, '🌦️', 'Rain showers'],
+            [95, '⛈️',  'Thunderstorm'],
+        ];
+        var match = weatherMap.reverse().find(function(w) { return code >= w[0]; });
+        var icon  = match ? match[1] : '🌡️';
+        var desc  = match ? match[2] : 'Unknown';
+
+        // Recommendation
+        var tip = '';
+        if (code >= 61) tip = '🌧️ Rain expected — great time for an indoor detail!';
+        else if (code >= 51) tip = '🌦️ Light rain expected — your car will get dirty again!';
+        else if (code <= 1 && temp >= 22) tip = '☀️ Perfect wash weather today!';
+        else if (wind > 40) tip = '💨 Windy — book indoors or check later.';
+        else tip = '✅ Good conditions for a wash.';
+
+        document.getElementById('weatherIcon').textContent = icon;
+        document.getElementById('weatherDesc').textContent = desc + ' · ' + temp + '°C · Wind ' + wind + ' km/h';
+        document.getElementById('weatherTip').textContent  = tip;
+    }).catch(function() {
+        document.getElementById('weatherDesc').textContent = 'Weather unavailable';
+        document.getElementById('weatherTip').textContent  = '';
+    });
+})();
+
+// ── EmailJS confirmation ──────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', function () {
+    var bookedEmail   = /*[[${bookedEmail}]]*/ null;
+    var bookedName    = /*[[${bookedName}]]*/ '';
+    var bookedService = /*[[${bookedService}]]*/ '';
+    var bookedTime    = /*[[${bookedTime}]]*/ '';
+    var bookingId     = /*[[${bookingId}]]*/ 0;
+    var bookedPrice   = /*[[${bookedPrice}]]*/ '';
+    var payStatus     = /*[[${paymentStatus}]]*/ '';
+
+    if (bookedEmail && bookedEmail.trim() !== '') {
+        emailjs.init('bUPRN3KSh0wnf7wMT');
+        var fTime   = bookedTime ? bookedTime.replace('T', ' ') : '';
+        var slipUrl = window.location.origin + '/booking/slip/' + bookingId;
+        var msg =
+            '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n' +
+            '   WITBANK ELITE CAR WASH\n' +
+            '   BOOKING CONFIRMATION\n' +
+            '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n' +
+            'Hello ' + bookedName + ',\n\n' +
+            'Booking Ref  : #WE-' + bookingId + '\n' +
+            'Service      : ' + bookedService + '\n' +
+            'Date & Time  : ' + fTime + '\n' +
+            'Amount       : R' + bookedPrice + '\n' +
+            'Payment      : ' + (payStatus || 'Pay on Arrival') + '\n\n' +
+            'Slip: ' + slipUrl + '\n\n' +
+            'Thank you for choosing Witbank Elite Car Wash!\n';
+
+        emailjs.send('service_6zzoal6', 'template_k0p4ymf', {
+            to_name: bookedName, name: bookedName,
+            to_email: bookedEmail.trim(), email: bookedEmail.trim(),
+            user_email: bookedEmail.trim(),
+            reply_to: 'marvinnicolasmathebula@gmail.com',
+    bcc_email: 'marvinnicolasmathebula@gmail.com',
+            service_type: bookedService,
+            booking_time: fTime,
+            booking_ref:  '#WE-' + bookingId,
+            amount:       'R' + bookedPrice,
+            slip_url:     slipUrl,
+            message:      msg
+        }).then(function () {
+            var el = document.getElementById('emailjs-status');
+            if (el) { el.textContent = '✓ Sent!'; el.style.color = '#4dff4d'; }
+        }, function (err) {
+            var el = document.getElementById('emailjs-status');
+            if (el) { el.textContent = '⚠ Failed'; el.style.color = '#ffaa00'; }
+        });
+    }
+
+    // Set date picker min to today
+    var dp = document.getElementById('datePicker');
+    if (dp) {
+        var today = new Date().toISOString().split('T')[0];
+        dp.min = today;
+        dp.value = today;
+        loadSlots(today);
+    }
+});
+/*]]>*/
+</script>
+<script src="/js/main.js"></script>
+</body>
+</html>

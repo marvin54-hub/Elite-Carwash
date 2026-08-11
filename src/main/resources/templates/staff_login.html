@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Staff Login | Witbank Elite</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        body { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
+        .login-card {
+            width: 100%; max-width: 420px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 20px; padding: 50px 40px;
+            backdrop-filter: blur(20px);
+        }
+        .login-logo { text-align: center; margin-bottom: 35px; }
+        .login-logo h1 { font-size: 1.8rem; font-weight: 800; letter-spacing: 2px; }
+        .login-logo h1 span { color: #00d2ff; }
+        .login-logo p { color: rgba(255,255,255,0.5); font-size: 0.85rem; margin-top: 5px; }
+        .login-field { margin-bottom: 18px; }
+        .login-field label { display: block; font-size: 0.75rem; text-transform: uppercase;
+            letter-spacing: 1px; color: rgba(255,255,255,0.5); margin-bottom: 7px; }
+        .login-field input {
+            width: 100%; padding: 13px 16px;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 10px; color: white;
+            font-family: 'Outfit', sans-serif; font-size: 1rem;
+            box-sizing: border-box;
+        }
+        .login-field input:focus { outline: none; border-color: #00d2ff; background: rgba(255,255,255,0.09); }
+        .login-btn {
+            width: 100%; padding: 14px;
+            background: linear-gradient(135deg, #00d2ff, #0099bb);
+            border: none; border-radius: 10px; color: #000;
+            font-family: 'Outfit', sans-serif; font-size: 1rem;
+            font-weight: 700; cursor: pointer; margin-top: 8px;
+            transition: 0.3s; letter-spacing: 0.5px;
+        }
+        .login-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,210,255,0.35); }
+        .alert-error {
+            background: rgba(255,77,77,0.12); border: 1px solid rgba(255,77,77,0.3);
+            color: #ff6b6b; padding: 12px 16px; border-radius: 10px;
+            font-size: 0.88rem; margin-bottom: 20px; text-align: center;
+        }
+        .alert-success {
+            background: rgba(77,255,77,0.1); border: 1px solid rgba(77,255,77,0.25);
+            color: #4dff4d; padding: 12px 16px; border-radius: 10px;
+            font-size: 0.88rem; margin-bottom: 20px; text-align: center;
+        }
+        .back-link { text-align: center; margin-top: 22px; font-size: 0.82rem; }
+        .back-link a { color: rgba(255,255,255,0.4); text-decoration: none; }
+        .back-link a:hover { color: #00d2ff; }
+        .divider { border: none; border-top: 1px solid rgba(255,255,255,0.07); margin: 28px 0; }
+        .default-creds {
+            background: rgba(0,210,255,0.05); border: 1px solid rgba(0,210,255,0.15);
+            border-radius: 10px; padding: 14px 16px; font-size: 0.78rem;
+            color: rgba(255,255,255,0.5); line-height: 1.8;
+        }
+        .default-creds strong { color: rgba(255,255,255,0.75); }
+    </style>
+</head>
+<body>
+<div class="login-card">
+    <div class="login-logo">
+        <h1>WITBANK <span>ELITE</span></h1>
+        <p>🔐 Staff Portal — Authorised Access Only</p>
+    </div>
+
+    <div th:if="${error}"   class="alert-error"   th:text="${error}"></div>
+    <div th:if="${message}" class="alert-success" th:text="${message}"></div>
+
+    <form action="/staff/login" method="POST">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+        <div class="login-field">
+            <label>Username</label>
+            <input type="text" name="username" placeholder="Enter your username" required autofocus>
+        </div>
+        <div class="login-field">
+            <label>Password</label>
+            <input type="password" name="password" placeholder="Enter your password" required>
+        </div>
+        <button type="submit" class="login-btn">Sign In to Portal →</button>
+    </form>
+
+    <hr class="divider">
+    <div class="default-creds">
+        <strong>Default Credentials</strong><br>
+        Admin &nbsp;— username: <strong>admin</strong> &nbsp;/ password: <strong>admin123</strong><br>
+        Staff &nbsp;— username: <strong>staff1</strong> / password: <strong>staff123</strong>
+    </div>
+
+    <div class="back-link"><a href="/">← Back to Website</a></div>
+</div>
+</body>
+</html>

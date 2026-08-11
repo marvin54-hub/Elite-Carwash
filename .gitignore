@@ -1,0 +1,42 @@
+# ── Maven build output ────────────────────────────────────────
+target/
+*.class
+*.jar
+*.war
+*.ear
+
+# ── H2 Database (contains real user data — NEVER commit) ─────
+data/
+*.mv.db
+*.trace.db
+
+# ── IDE files ─────────────────────────────────────────────────
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+*.swp
+*.swo
+.project
+.classpath
+.settings/
+
+# ── OS files ──────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Environment / Secrets (NEVER commit) ─────────────────────
+.env
+.env.local
+.env.production
+application-prod.properties
+application-secret.properties
+
+# ── Logs ──────────────────────────────────────────────────────
+*.log
+logs/
+
+# ── Maven wrapper (optional, keep if users don't have Maven) ──
+# .mvn/wrapper/maven-wrapper.jar

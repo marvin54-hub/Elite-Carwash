@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>SQL Console | Witbank Elite Admin</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        *{box-sizing:border-box;margin:0;padding:0}
+        body{background:#0b1120;color:#fff;font-family:'Outfit',sans-serif;min-height:100vh}
+        .topbar{display:flex;justify-content:space-between;align-items:center;padding:14px 28px;
+                border-bottom:1px solid rgba(255,255,255,0.1);background:rgba(0,0,0,0.5)}
+        .logo{font-size:1.1rem;font-weight:800}.logo span{color:#4dff4d}
+        .nav-links a{color:rgba(255,255,255,0.6);text-decoration:none;font-size:0.85rem;margin-left:16px}
+        .nav-links a:hover{color:#fff}
+        .container{max-width:1200px;margin:28px auto;padding:0 20px}
+        h1{font-size:1.4rem;margin-bottom:6px}h1 span{color:#4dff4d}
+        .sub{color:rgba(255,255,255,0.45);font-size:0.85rem;margin-bottom:22px}
+        .layout{display:grid;grid-template-columns:200px 1fr;gap:20px}
+        .sidebar{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);
+                 border-radius:14px;padding:16px}
+        .sidebar h3{font-size:0.78rem;text-transform:uppercase;letter-spacing:1px;
+                    color:rgba(255,255,255,0.4);margin-bottom:10px}
+        .tbl-btn{display:block;width:100%;text-align:left;background:none;border:none;
+                 color:rgba(255,255,255,0.65);cursor:pointer;padding:7px 10px;border-radius:8px;
+                 font-family:'Outfit',sans-serif;font-size:0.82rem}
+        .tbl-btn:hover{background:rgba(255,255,255,0.07);color:#fff}
+        .main{display:flex;flex-direction:column;gap:16px}
+        .query-box{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:20px}
+        textarea{width:100%;background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.15);
+                 border-radius:10px;color:#4dff4d;font-family:'JetBrains Mono',monospace;
+                 font-size:0.88rem;padding:14px;resize:vertical;min-height:120px;outline:none}
+        textarea:focus{border-color:#4dff4d}
+        .run-row{display:flex;gap:10px;margin-top:12px}
+        .btn-run{background:#4dff4d;color:#000;border:none;border-radius:10px;padding:10px 28px;
+                 font-family:'Outfit',sans-serif;font-weight:700;cursor:pointer;font-size:0.9rem}
+        .btn-clear{background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);
+                   color:rgba(255,255,255,0.6);border-radius:10px;padding:10px 20px;
+                   font-family:'Outfit',sans-serif;cursor:pointer;font-size:0.9rem}
+        .result-box{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.1);
+                    border-radius:14px;overflow:hidden}
+        .result-header{padding:14px 20px;border-bottom:1px solid rgba(255,255,255,0.1);
+                       display:flex;justify-content:space-between;align-items:center;font-size:0.85rem}
+        .result-table{overflow-x:auto}
+        table{width:100%;border-collapse:collapse;font-size:0.82rem;font-family:'JetBrains Mono',monospace}
+        td{padding:9px 14px;border-bottom:1px solid rgba(255,255,255,0.05);word-break:break-all}
+        tr:last-child td{border-bottom:none}
+        tr:nth-child(even){background:rgba(255,255,255,0.02)}
+        .err{background:rgba(255,77,77,0.1);border:1px solid rgba(255,77,77,0.3);
+             border-radius:10px;padding:14px 18px;color:#ff8080;font-family:'JetBrains Mono',monospace;font-size:0.82rem}
+        .ok{background:rgba(77,255,77,0.08);border:1px solid rgba(77,255,77,0.25);
+            border-radius:10px;padding:14px 18px;color:#4dffaa;font-size:0.88rem}
+        .chip-query{background:rgba(255,255,255,0.06);border-radius:8px;padding:10px 14px;
+                    font-family:'JetBrains Mono',monospace;font-size:0.78rem;color:rgba(255,255,255,0.5);
+                    word-break:break-all;margin-bottom:14px}
+        @media(max-width:700px){.layout{grid-template-columns:1fr}}
+    </style>
+</head>
+<body>
+<div class="topbar">
+    <div class="logo">WITBANK <span>ELITE</span> <span style="font-size:0.72rem;color:rgba(255,255,255,0.3);font-weight:400;margin-left:8px;">SQL CONSOLE</span></div>
+    <div class="nav-links">
+        <a href="/admin/dashboard">← Dashboard</a>
+        <a href="/staff/logout" style="color:#ff8080;">Sign Out</a>
+    </div>
+</div>
+<div class="container">
+    <h1>🗄️ SQL <span>Console</span></h1>
+    <p class="sub">Admin-only — run native SQL queries against the H2 database.</p>
+    <div class="layout">
+        <!-- Table list -->
+        <div class="sidebar">
+            <h3>Tables</h3>
+            <button class="tbl-btn" th:each="t : ${tables}"
+                    th:text="${t}" th:onclick="'fillQuery(\'SELECT * FROM ' + ${t} + ' LIMIT 20\')'" >TABLE</button>
+        </div>
+        <!-- Query area -->
+        <div class="main">
+            <div class="query-box">
+                <form action="/admin/sql" method="POST" id="sqlForm">
+                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                    <textarea name="sql" id="sqlInput" placeholder="SELECT * FROM BOOKINGS LIMIT 20;"
+                              th:text="${executedSql}"></textarea>
+                    <div class="run-row">
+                        <button type="submit" class="btn-run">▶ Run Query</button>
+                        <button type="button" class="btn-clear" onclick="document.getElementById('sqlInput').value=''">✕ Clear</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Results -->
+            <div th:if="${sqlError != null}" class="err">
+                <strong>Error:</strong><br th:text="${sqlError}">
+            </div>
+            <div th:if="${updateMessage != null}" class="ok" th:text="${updateMessage}"></div>
+
+            <div th:if="${resultRows != null}" class="result-box">
+                <div class="result-header">
+                    <span th:text="'Results — ' + ${rowCount} + ' row(s)'">Results</span>
+                    <span th:if="${executedSql != null}" class="chip-query" th:text="${executedSql}"></span>
+                </div>
+                <div class="result-table">
+                    <table>
+                        <tbody>
+                            <tr th:each="row : ${resultRows}">
+                                <td th:each="cell : ${row}" th:text="${cell}">-</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div th:if="${#lists.isEmpty(resultRows)}"
+                         style="text-align:center;padding:30px;color:rgba(255,255,255,0.35);">No rows returned.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+function fillQuery(q) {
+    document.getElementById('sqlInput').value = q;
+    document.getElementById('sqlInput').focus();
+}
+</script>
+</body>
+</html>

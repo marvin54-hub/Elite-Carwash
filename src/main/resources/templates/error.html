@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Error | Witbank Elite</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        body { display:flex; align-items:center; justify-content:center; min-height:100vh; padding:20px; }
+        .error-card {
+            width:100%; max-width:520px; text-align:center;
+            background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08);
+            border-radius:24px; padding:55px 40px; backdrop-filter:blur(20px);
+        }
+        .error-code { font-size:5rem; font-weight:800; line-height:1;
+            background:linear-gradient(135deg,#00d2ff,#0099bb); -webkit-background-clip:text;
+            -webkit-text-fill-color:transparent; background-clip:text; }
+        .error-title { font-size:1.4rem; font-weight:700; margin:16px 0 10px; }
+        .error-msg { color:rgba(255,255,255,0.5); font-size:0.92rem; line-height:1.7; margin-bottom:30px; }
+        .btn-home { display:inline-block; padding:12px 30px;
+            background:linear-gradient(135deg,#00d2ff,#0099bb);
+            border-radius:50px; color:#000; font-weight:700;
+            text-decoration:none; font-size:0.95rem; margin:0 6px; }
+        .btn-back { display:inline-block; padding:12px 30px;
+            border:1px solid rgba(255,255,255,0.2); border-radius:50px;
+            color:rgba(255,255,255,0.6); text-decoration:none; font-size:0.95rem;
+            margin:0 6px; }
+        .btn-back:hover { border-color:rgba(255,255,255,0.4); color:white; }
+        .logo { font-size:1rem; font-weight:800; letter-spacing:2px;
+            color:rgba(255,255,255,0.3); margin-bottom:30px; }
+        .logo span { color:#00d2ff; }
+    </style>
+</head>
+<body>
+<div class="error-card">
+    <div class="logo">WITBANK <span>ELITE</span></div>
+
+    <div class="error-code" th:text="${status ?: '🚗'}">404</div>
+
+    <h1 class="error-title" th:text="${status == 404 ? 'Page Not Found' :
+                                       status == 403 ? 'Access Denied' :
+                                       status == 500 ? 'Something Went Wrong' : 'An Error Occurred'}">
+        Oops!
+    </h1>
+
+    <p class="error-msg"
+       th:text="${status == 404 ? 'The page you\'re looking for doesn\'t exist or has been moved.' :
+                  status == 403 ? 'You don\'t have permission to access this page. Please log in.' :
+                  status == 500 ? 'Our server hit a bump. Please try again in a moment.' :
+                  'An unexpected error occurred. Please go back and try again.'}">
+    </p>
+
+    <div>
+        <a href="/" class="btn-home">🏠 Back to Home</a>
+        <a href="javascript:history.back()" class="btn-back">← Go Back</a>
+    </div>
+</div>
+</body>
+</html>

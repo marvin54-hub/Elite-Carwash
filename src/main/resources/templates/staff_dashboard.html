@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>Staff Panel | Witbank Elite</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        *{box-sizing:border-box;margin:0;padding:0}
+        :root{--cyan:#00d2ff;--bg:#0b1120;--card:rgba(255,255,255,0.05);--border:rgba(255,255,255,0.1);--dim:rgba(255,255,255,0.45)}
+        body{background:var(--bg);color:#fff;font-family:'Outfit',sans-serif;min-height:100vh}
+        .topbar{display:flex;justify-content:space-between;align-items:center;padding:16px 32px;
+                border-bottom:1px solid var(--border);background:rgba(0,0,0,0.4);
+                position:sticky;top:0;z-index:100;backdrop-filter:blur(12px)}
+        .logo{font-size:1.2rem;font-weight:800;letter-spacing:1px}
+        .logo span{color:var(--cyan)}
+        .staff-badge{background:rgba(255,170,0,0.15);border:1px solid rgba(255,170,0,0.3);
+                     color:#ffaa00;padding:4px 12px;border-radius:20px;font-size:0.78rem;font-weight:700}
+        .nav-actions{display:flex;align-items:center;gap:12px}
+        .btn-sm{padding:8px 16px;border-radius:8px;border:none;cursor:pointer;
+                font-family:'Outfit',sans-serif;font-size:0.82rem;font-weight:600;text-decoration:none;display:inline-block}
+        .btn-cyan{background:linear-gradient(135deg,var(--cyan),#0099bb);color:#000}
+        .btn-outline{background:transparent;border:1px solid var(--border);color:rgba(255,255,255,0.7)}
+        .btn-danger{background:rgba(255,77,77,0.15);border:1px solid rgba(255,77,77,0.3);color:#ff8080}
+        .container{max-width:1100px;margin:30px auto;padding:0 20px}
+        .welcome{background:linear-gradient(135deg,rgba(0,210,255,0.08),rgba(0,50,150,0.08));
+                 border:1px solid rgba(0,210,255,0.2);border-radius:16px;padding:22px 28px;
+                 display:flex;justify-content:space-between;align-items:center;margin-bottom:28px;flex-wrap:wrap;gap:14px}
+        .welcome h2{font-size:1.2rem}
+        .avail-form{display:flex;align-items:center;gap:10px;font-size:0.85rem}
+        .avail-dot{width:10px;height:10px;border-radius:50%;display:inline-block}
+        .dot-green{background:#4dffaa}
+        .dot-amber{background:#ffaa00}
+        .card{background:var(--card);border:1px solid var(--border);border-radius:16px;margin-bottom:20px}
+        .card-header{padding:18px 22px;border-bottom:1px solid var(--border);
+                     display:flex;justify-content:space-between;align-items:center}
+        .card-title{font-size:1rem;font-weight:700}
+        table{width:100%;border-collapse:collapse;font-size:0.84rem}
+        th{text-align:left;padding:11px 14px;color:var(--dim);font-weight:600;
+           border-bottom:1px solid var(--border)}
+        td{padding:12px 14px;border-bottom:1px solid rgba(255,255,255,0.04);vertical-align:middle}
+        tr:last-child td{border-bottom:none}
+        .badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:0.72rem;font-weight:700}
+        .b-pending{background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.6)}
+        .b-progress{background:rgba(0,210,255,0.12);color:#00d2ff}
+        .b-complete{background:rgba(0,255,150,0.12);color:#4dffaa}
+        .b-cancel{background:rgba(255,77,77,0.12);color:#ff8080}
+        .b-paid{background:rgba(0,255,150,0.12);color:#4dffaa}
+        .b-unpaid{background:rgba(255,170,0,0.12);color:#ffaa00}
+        .verified-icon{color:#4dffaa;font-size:0.9rem}
+        select.status-sel{background:rgba(255,255,255,0.06);border:1px solid var(--border);
+                          color:#fff;border-radius:8px;padding:6px 10px;font-size:0.8rem;cursor:pointer}
+        .empty{text-align:center;padding:50px;color:var(--dim);font-size:0.9rem}
+        .qr-link{color:var(--cyan);text-decoration:none;font-size:0.82rem;font-weight:600}
+        .tabs{display:flex;gap:8px;margin-bottom:20px}
+        .tab{padding:9px 18px;border-radius:10px;border:1px solid var(--border);
+             background:transparent;color:rgba(255,255,255,0.6);cursor:pointer;
+             font-family:'Outfit',sans-serif;font-size:0.85rem}
+        .tab.active{background:rgba(0,210,255,0.12);border-color:rgba(0,210,255,0.3);color:var(--cyan);font-weight:700}
+        .panel{display:none}
+        .panel.active{display:block}
+    </style>
+</head>
+<body>
+<div class="topbar">
+    <div>
+        <div class="logo">WITBANK <span>ELITE</span></div>
+    </div>
+    <div class="nav-actions">
+        <span class="staff-badge">🧑‍🔧 STAFF</span>
+        <a href="/admin/verify" class="btn-sm btn-cyan">🔎 Verify QR</a>
+        <a href="/staff/logout" class="btn-sm btn-danger">Sign Out</a>
+    </div>
+</div>
+
+<div class="container">
+
+    <!-- Welcome bar with availability toggle -->
+    <div class="welcome">
+        <div>
+            <h2 th:text="'Welcome, ' + ${staffUser.fullName}">Welcome</h2>
+            <div style="font-size:0.82rem;color:var(--dim);margin-top:4px;">
+                <span class="avail-dot" th:classappend="${staffUser.onLeave} ? 'dot-amber' : 'dot-green'"></span>
+                <span th:text="${staffUser.onLeave} ? ' Currently On Leave' : ' On Duty'"> On Duty</span>
+            </div>
+        </div>
+        <form action="/staff/availability" method="POST" class="avail-form">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+            <input type="hidden" name="onLeave" th:value="${!staffUser.onLeave}">
+            <button type="submit" class="btn-sm" th:classappend="${staffUser.onLeave} ? 'btn-cyan' : 'btn-outline'">
+                <span th:text="${staffUser.onLeave} ? '✅ Go On Duty' : '🌴 Mark On Leave'">Toggle</span>
+            </button>
+        </form>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+        <button class="tab active" onclick="switchTab('assigned')">📋 My Assigned Bookings</button>
+        <button class="tab" onclick="switchTab('all')">📂 All Bookings</button>
+    </div>
+
+    <!-- My Assigned Bookings -->
+    <div class="panel active" id="panel-assigned">
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">My Assigned Bookings</span>
+                <span style="font-size:0.8rem;color:var(--dim);"
+                      th:text="${#lists.size(myBookings)} + ' booking(s)'">0</span>
+            </div>
+            <div th:if="${#lists.isEmpty(myBookings)}" class="empty">
+                No bookings assigned to you yet.
+            </div>
+            <table th:unless="${#lists.isEmpty(myBookings)}">
+                <thead>
+                    <tr><th>Ref</th><th>Customer</th><th>Service</th><th>Date &amp; Time</th>
+                        <th>Vehicle</th><th>Payment</th><th>Status</th><th>Actions</th></tr>
+                </thead>
+                <tbody>
+                    <tr th:each="b : ${myBookings}">
+                        <td style="color:var(--dim);font-size:0.78rem;" th:text="'#WE-'+${b.id}">-</td>
+                        <td>
+                            <div style="font-weight:600;" th:text="${b.customerName}">-</div>
+                            <div style="font-size:0.75rem;color:var(--dim);" th:text="${b.cellphone}">-</div>
+                        </td>
+                        <td th:text="${b.serviceType}">-</td>
+                        <td style="font-size:0.82rem;" th:text="${#temporals.format(b.bookingTime,'dd MMM yyyy, HH:mm')}">-</td>
+                        <td style="font-size:0.8rem;color:var(--dim);"
+                            th:text="${b.vehicleReg != null and !b.vehicleReg.isEmpty() ? b.vehicleReg : '—'}">—</td>
+                        <td>
+                            <span th:if="${b.paid}" class="badge b-paid">✓ Paid</span>
+                            <span th:unless="${b.paid}" class="badge b-unpaid">Unpaid</span>
+                        </td>
+                        <td>
+                            <span class="badge"
+                                  th:classappend="${b.status=='Completed'} ? 'b-complete' : ${b.status=='In Progress'} ? 'b-progress' : ${b.status=='Cancelled'} ? 'b-cancel' : 'b-pending'"
+                                  th:text="${b.status}">-</span>
+                            <span th:if="${b.verified}" class="verified-icon" title="QR Verified">✓</span>
+                        </td>
+                        <td>
+                            <form action="/staff/bookings/update-status" method="POST" style="display:flex;gap:6px;align-items:center;">
+                                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                                <input type="hidden" name="id" th:value="${b.id}">
+                                <select name="status" class="status-sel" onchange="this.form.submit()">
+                                    <option th:selected="${b.status=='Pending'}"     value="Pending">Pending</option>
+                                    <option th:selected="${b.status=='In Progress'}" value="In Progress">In Progress</option>
+                                    <option th:selected="${b.status=='Completed'}"   value="Completed">Completed</option>
+                                    <option th:selected="${b.status=='Cancelled'}"   value="Cancelled">Cancelled</option>
+                                </select>
+                            </form>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- All Bookings (read-only overview) -->
+    <div class="panel" id="panel-all">
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">All Bookings Overview</span>
+                <span style="font-size:0.8rem;color:var(--dim);"
+                      th:text="${#lists.size(allBookings)} + ' total'">0</span>
+            </div>
+            <div th:if="${#lists.isEmpty(allBookings)}" class="empty">No bookings in the system yet.</div>
+            <table th:unless="${#lists.isEmpty(allBookings)}">
+                <thead>
+                    <tr><th>Ref</th><th>Customer</th><th>Service</th><th>Date &amp; Time</th><th>Status</th><th>Verified</th></tr>
+                </thead>
+                <tbody>
+                    <tr th:each="b : ${allBookings}">
+                        <td style="color:var(--dim);font-size:0.78rem;" th:text="'#WE-'+${b.id}">-</td>
+                        <td th:text="${b.customerName}">-</td>
+                        <td th:text="${b.serviceType}">-</td>
+                        <td style="font-size:0.82rem;" th:text="${#temporals.format(b.bookingTime,'dd MMM yyyy, HH:mm')}">-</td>
+                        <td><span class="badge"
+                                  th:classappend="${b.status=='Completed'} ? 'b-complete' : ${b.status=='In Progress'} ? 'b-progress' : ${b.status=='Cancelled'} ? 'b-cancel' : 'b-pending'"
+                                  th:text="${b.status}">-</span></td>
+                        <td><span th:if="${b.verified}" style="color:#4dffaa;">✓ Yes</span>
+                            <span th:unless="${b.verified}" style="color:var(--dim);">—</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+<script>
+function switchTab(name) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    event.target.classList.add('active');
+    document.getElementById('panel-' + name).classList.add('active');
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Dashboard | Witbank Elite</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="/css/panels.css">
+</head>
+<body class="panel-body">
+
+<!-- ── Top bar ──────────────────────────────────────────────────── -->
+<header class="p-topbar">
+  <div class="p-topbar-logo">
+    <div class="brand">WITBANK <span>ELITE</span></div>
+    <span class="role-pill rp-admin">Admin</span>
+  </div>
+  <div class="p-topbar-left">
+    <input type="text" class="p-search" placeholder="🔍  Search bookings, customers…" id="globalSearch">
+  </div>
+  <div class="p-topbar-right">
+    <div class="p-notif-btn" title="Notification Log" onclick="showTab('notifications-section',null)">
+      🔔 <span class="p-notif-dot"></span>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div class="p-avatar" th:text="${staffUser.fullName != null and !staffUser.fullName.isEmpty() ? staffUser.fullName.substring(0,1).toUpperCase() : '?'}">A</div>
+      <div class="p-user-info">
+        <div class="name" th:text="${staffUser.fullName}">Admin</div>
+        <div class="role" th:text="${staffUser.role}">ADMIN</div>
+      </div>
+    </div>
+    <a href="/admin/sql" style="display:flex;align-items:center;gap:10px;padding:12px 20px;
+     color:#4dff4d;text-decoration:none;font-size:0.88rem;font-weight:600;
+     border-top:1px solid var(--p-border);">
+  <span style="font-size:1.1rem;">🗄️</span> SQL Console
+</a>
+<a href="/staff/logout" class="p-btn p-btn-outline p-btn-sm" style="color:#ef4444;border-color:rgba(239,68,68,0.3);">Logout</a>
+  </div>
+</header>
+
+<!-- ── Sidebar ──────────────────────────────────────────────────── -->
+<nav class="p-sidebar" id="sidebar">
+  <span class="p-nav-section">Main</span>
+  <button class="p-nav-item active" id="nav-dashboard" onclick="showTab('dashboard-section',this)">
+    <span class="icon">📊</span> Dashboard
+  </button>
+  <button class="p-nav-item" id="nav-bookings" onclick="showTab('bookings-section',this)">
+    <span class="icon">📋</span> Bookings
+    <span class="p-nav-badge" th:text="${totalBookings}">0</span>
+  </button>
+  <button class="p-nav-item" id="nav-customers" onclick="showTab('customers-section',this)">
+    <span class="icon">🧑</span> Customers
+  </button>
+
+  <hr class="p-nav-divider">
+  <span class="p-nav-section">Operations</span>
+  <button class="p-nav-item" id="nav-inventory" onclick="showTab('inventory-section',this)">
+    <span class="icon">📦</span> Inventory
+    <span class="p-nav-badge" th:if="${lowStockCount > 0}" th:text="${lowStockCount}"></span>
+  </button>
+  <button class="p-nav-item" id="nav-services" onclick="showTab('services-section',this)">
+    <span class="icon">🔧</span> Services
+  </button>
+  <button class="p-nav-item" id="nav-schedule" onclick="showTab('schedule-section',this)">
+    <span class="icon">📅</span> Schedule
+  </button>
+
+  <hr class="p-nav-divider">
+  <span class="p-nav-section">People</span>
+  <button class="p-nav-item" id="nav-staff" onclick="showTab('staff-section',this)">
+    <span class="icon">👥</span> Staff
+  </button>
+  <button class="p-nav-item" id="nav-feedback" onclick="showTab('feedback-section',this)">
+    <span class="icon">⭐</span> Reviews
+  </button>
+  <button class="p-nav-item" id="nav-notifications" onclick="showTab('notifications-section',this)">
+    <span class="icon">📢</span> Notifications
+  </button>
+
+  <hr class="p-nav-divider">
+  <span class="p-nav-section">Reports</span>
+  <a href="/admin/report/pdf" target="_blank"
+   style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,77,77,0.15);
+          border:1px solid rgba(255,77,77,0.3);color:#ff8080;border-radius:8px;
+          padding:7px 14px;text-decoration:none;font-size:0.82rem;font-weight:600;">
+  📄 PDF Report
+</a>
+<a href="/admin/report/excel" target="_blank"
+   style="display:inline-flex;align-items:center;gap:6px;background:rgba(0,200,80,0.15);
+          border:1px solid rgba(0,200,80,0.3);color:#4dffaa;border-radius:8px;
+          padding:7px 14px;text-decoration:none;font-size:0.82rem;font-weight:600;margin-left:8px;">
+  📊 Excel Report
+</a>
+<a href="/admin/export" class="p-nav-item">
+    <span class="icon">📄</span> Export Report
+  </a>
+  <a href="/h2-console" target="_blank" class="p-nav-item">
+    <span class="icon">🗄️</span> SQL Console
+  </a>
+
+  <div class="p-sidebar-footer">
+    <a href="/" class="p-btn p-btn-outline p-btn-sm" style="width:100%;justify-content:center;text-decoration:none;">← Back to Website</a>
+  </div>
+</nav>
+
+<!-- ── Main ─────────────────────────────────────────────────────── -->
+<main class="p-main">
+<div class="p-content">
+
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <!--  DASHBOARD OVERVIEW                                       -->
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <div id="dashboard-section" class="tab-section">
+    <div class="p-page-header">
+      <div>
+        <h1 class="p-page-title">Business <span style="color:var(--p-blue)">Dashboard</span></h1>
+        <p class="p-page-sub">Welcome back, <span th:text="${staffUser.fullName}">Admin</span> — here's today's overview.</p>
+      </div>
+      <div class="p-page-actions">
+        <a href="/admin/export" class="p-btn p-btn-primary">📄 Generate Report</a>
+      </div>
+    </div>
+
+    <!-- KPI row -->
+    <div class="p-kpi-grid">
+      <div class="p-kpi">
+        <div class="p-kpi-icon">💰</div>
+        <div class="p-kpi-label">Total Revenue</div>
+        <div class="p-kpi-value" th:text="${'R' + #numbers.formatDecimal(totalRevenue,1,0)}">R0</div>
+        <div class="p-kpi-sub">All-time gross</div>
+      </div>
+      <div class="p-kpi success">
+        <div class="p-kpi-icon">📋</div>
+        <div class="p-kpi-label">Total Bookings</div>
+        <div class="p-kpi-value" th:text="${totalBookings}">0</div>
+        <div class="p-kpi-sub">Confirmed reservations</div>
+      </div>
+      <div class="p-kpi" th:classappend="${lowStockCount > 0 ? 'danger' : 'success'}">
+        <div class="p-kpi-icon">📦</div>
+        <div class="p-kpi-label">Low Stock Items</div>
+        <div class="p-kpi-value"
+             th:text="${lowStockCount}"
+             th:style="${lowStockCount > 0 ? 'color:var(--p-danger)' : ''}">0</div>
+        <div class="p-kpi-sub" th:text="${lowStockCount > 0 ? 'Reorder needed!' : 'All stocks OK'}">-</div>
+      </div>
+      <div class="p-kpi warn">
+        <div class="p-kpi-icon">⭐</div>
+        <div class="p-kpi-label">Avg. Rating</div>
+        <div class="p-kpi-value" th:text="${(avgRating != null ? #numbers.formatDecimal(avgRating,1,1) : '0.0') + ' / 5'}">0 / 5</div>
+        <div class="p-kpi-sub">Customer feedback score</div>
+      </div>
+    </div>
+
+    <!-- Charts placeholder + recent bookings -->
+    <div class="p-chart-grid">
+      <div class="p-card">
+        <div class="p-card-header"><h3 class="p-card-title">Revenue by Service</h3></div>
+        <div class="p-card-body">
+          <canvas id="revenueChart" height="180"></canvas>
+          <p th:if="${#maps.isEmpty(revenueByService)}" class="p-chart-placeholder" style="text-align:center;color:var(--p-dim);padding:40px 0;font-size:0.85rem;">No revenue data yet.</p>
+        </div>
+      </div>
+      <div class="p-card">
+        <div class="p-card-header"><h3 class="p-card-title">Booking Volume by Service</h3></div>
+        <div class="p-card-body">
+          <canvas id="bookingsChart" height="180"></canvas>
+          <p th:if="${#maps.isEmpty(bookingCountByService)}" class="p-chart-placeholder" style="text-align:center;color:var(--p-dim);padding:40px 0;font-size:0.85rem;">No booking data yet.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent bookings preview -->
+    <div class="p-card">
+      <div class="p-card-header">
+        <h3 class="p-card-title">Recent Bookings</h3>
+        <button class="p-btn p-btn-outline p-btn-sm" onclick="showTab('bookings-section',null)">View All →</button>
+      </div>
+      <hr class="p-card-sep">
+      <div class="p-table-wrap">
+        <table class="p-table">
+          <thead><tr><th>Customer</th><th>Service</th><th>Date &amp; Time</th><th>Amount</th><th>Status</th><th>Payment</th></tr></thead>
+          <tbody>
+            <tr th:each="b,i : ${bookings}" th:if="${i.index < 5}">
+              <td>
+                <span th:text="${b.customerName}">-</span>
+                <span th:if="${customerStats[b.customerName] != null and customerStats[b.customerName] >= 3}" class="vip-badge">VIP</span>
+              </td>
+              <td th:text="${b.serviceType}">-</td>
+              <td th:text="${#temporals.format(b.bookingTime,'dd MMM yyyy, HH:mm')}">-</td>
+              <td th:text="${'R' + #numbers.formatDecimal(b.price,1,2)}">-</td>
+              <td>
+                <span class="p-badge"
+                      th:classappend="${b.status == 'Completed' ? 'p-badge-green' : b.status == 'Cancelled' ? 'p-badge-red' : b.status == 'In Progress' ? 'p-badge-blue' : 'p-badge-amber'}"
+                      th:text="${b.status}">-</span>
+              </td>
+              <td>
+                <span th:if="${b.paymentStatus == 'Paid'}" class="p-badge p-badge-green">✓ Paid</span>
+                <span th:unless="${b.paymentStatus == 'Paid'}" class="p-badge p-badge-amber">Pay on Arrival</span>
+              </td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(bookings)}">
+              <td colspan="6" style="text-align:center;padding:40px;color:var(--p-dim);">No bookings yet.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Recent reviews preview -->
+    <div class="p-card">
+      <div class="p-card-header">
+        <h3 class="p-card-title">Latest Customer Reviews</h3>
+        <button class="p-btn p-btn-outline p-btn-sm" onclick="showTab('feedback-section',null)">View All →</button>
+      </div>
+      <hr class="p-card-sep">
+      <div class="p-card-body">
+        <div th:each="fb,i : ${feedbackList}" th:if="${i.index < 3}"
+             style="padding:12px 0;border-bottom:1px solid var(--p-border);display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">
+          <div>
+            <div style="font-weight:600;font-size:0.88rem;" th:text="${fb.customerName}">-</div>
+            <div style="color:#f59e0b;font-size:0.95rem;" th:text="${fb.stars}">★★★★★</div>
+            <div style="font-size:0.78rem;color:var(--p-dim);margin-top:2px;" th:text="${fb.serviceType + ' · ' + #temporals.format(fb.submittedAt,'dd MMM yyyy')}">-</div>
+            <p th:if="${fb.comment != null and !fb.comment.isEmpty()}" style="font-size:0.85rem;margin-top:6px;color:rgba(255,255,255,0.7);" th:text="${fb.comment}">-</p>
+          </div>
+        </div>
+        <p th:if="${#lists.isEmpty(feedbackList)}" style="text-align:center;padding:30px;color:var(--p-dim);">No reviews yet.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <!--  BOOKINGS                                                  -->
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <div id="bookings-section" class="tab-section" style="display:none;">
+    <div class="p-page-header">
+      <div><h1 class="p-page-title">Bookings</h1><p class="p-page-sub">Manage all customer reservations.</p></div>
+      <div class="p-page-actions">
+        <a href="/admin/export" class="p-btn p-btn-primary">📄 Report</a>
+      </div>
+    </div>
+    <div class="p-card">
+      <div class="p-table-wrap">
+        <table class="p-table">
+          <thead><tr><th>Customer</th><th>Vehicle</th><th>Contact</th><th>Service</th><th>Date &amp; Time</th><th>Price</th><th>Status</th><th>Payment</th><th>Notify</th><th>Actions</th></tr></thead>
+          <tbody>
+          <tr th:each="b : ${bookings}">
+            <td>
+              <span th:text="${b.customerName}">-</span>
+              <span th:if="${customerStats[b.customerName] != null and customerStats[b.customerName] >= 3}" class="vip-badge">VIP</span>
+            </td>
+            <td>
+              <span th:if="${b.vehicleReg != null and !b.vehicleReg.isEmpty()}" class="p-badge p-badge-purple" th:text="${b.vehicleReg}">-</span>
+              <span th:unless="${b.vehicleReg != null and !b.vehicleReg.isEmpty()}" style="color:var(--p-dim);">—</span>
+            </td>
+            <td style="font-size:0.8rem;">
+              <div th:if="${b.cellphone != null and !b.cellphone.isEmpty()}" th:text="${'📱 ' + b.cellphone}">-</div>
+              <div th:if="${b.email != null and !b.email.isEmpty()}" th:text="${'📧 ' + b.email}" style="color:var(--p-dim);font-size:0.75rem;">-</div>
+            </td>
+            <td th:text="${b.serviceType}">-</td>
+            <td th:text="${#temporals.format(b.bookingTime,'dd MMM yyyy, HH:mm')}" style="white-space:nowrap;">-</td>
+            <td th:text="${'R' + #numbers.formatDecimal(b.price,1,2)}">-</td>
+            <td>
+              <form action="/admin/bookings/update-status" method="POST" style="margin:0;">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                <input type="hidden" name="id" th:value="${b.id}">
+                <select name="status" onchange="this.form.submit()" class="status-sel"
+                        th:classappend="${b.status == 'Completed' ? 'ss-completed' : b.status == 'Cancelled' ? 'ss-cancelled' : b.status == 'In Progress' ? 'ss-inprog' : 'ss-pending'}">
+                  <option value="Pending"     th:selected="${b.status == 'Pending'}">Pending</option>
+                  <option value="In Progress" th:selected="${b.status == 'In Progress'}">In Progress</option>
+                  <option value="Completed"   th:selected="${b.status == 'Completed'}">Completed</option>
+                  <option value="Cancelled"   th:selected="${b.status == 'Cancelled'}">Cancelled</option>
+                </select>
+              </form>
+            </td>
+            <td>
+              <span th:if="${b.paymentStatus == 'Paid'}" class="p-badge p-badge-green">✓ Paid</span>
+              <span th:unless="${b.paymentStatus == 'Paid'}" class="p-badge p-badge-amber">Arrival</span>
+            </td>
+            <td>
+              <form th:if="${b.cellphone != null and !b.cellphone.isEmpty()}" action="/admin/notifications/dispatch" method="POST" style="margin:0 0 3px;">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                <input type="hidden" name="recipient" th:value="${b.cellphone}">
+                <input type="hidden" name="type" value="SMS">
+                <input type="hidden" name="messageContent" th:value="${'Witbank Elite: Hi ' + b.customerName + ', your ' + b.serviceType + ' status is now ' + b.status + '.'}">
+                <button type="submit" class="p-btn p-btn-outline p-btn-sm">📱 SMS</button>
+              </form>
+              <form th:if="${b.email != null and !b.email.isEmpty()}" action="/admin/notifications/dispatch" method="POST" style="margin:0;"
+                    th:data-customer="${b.customerName}" th:data-service="${b.serviceType}"
+                    th:data-ref="${'#WE-' + b.id}" th:data-time="${#temporals.format(b.bookingTime,'dd MMM yyyy, HH:mm')}"
+                    th:data-amount="${'R' + #numbers.formatDecimal(b.price,1,2)}"
+                    onsubmit="triggerEmailJs(event,this)">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                <input type="hidden" name="recipient" th:value="${b.email}">
+                <input type="hidden" name="type" value="EMAIL">
+                <input type="hidden" name="messageContent" th:value="${'Hello ' + b.customerName + ', your ' + b.serviceType + ' status is now ' + b.status + '.'}">
+                <button type="submit" class="p-btn p-btn-outline p-btn-sm" style="color:var(--p-warn);border-color:rgba(245,158,11,0.3);">📧 Email</button>
+              </form>
+            </td>
+            <td style="display:flex;gap:6px;align-items:center;">
+              <a th:href="@{/booking/slip/{id}(id=${b.id})}" target="_blank" class="p-btn p-btn-outline p-btn-icon" title="Print Slip">🖨️</a>
+              <form action="/admin/bookings/delete" method="POST" style="margin:0;" onsubmit="return confirm('Delete this booking?')">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                <input type="hidden" name="id" th:value="${b.id}">
+                <button type="submit" class="p-btn p-btn-danger p-btn-icon">🗑️</button>
+              </form>
+            </td>
+          </tr>
+          <tr th:if="${#lists.isEmpty(bookings)}">
+            <td colspan="10" style="text-align:center;padding:50px;color:var(--p-dim);">No bookings yet.</td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <!--  INVENTORY                                                 -->
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <div id="inventory-section" class="tab-section" style="display:none;">
+    <div class="p-page-header">
+      <div><h1 class="p-page-title">Inventory</h1><p class="p-page-sub">Track and manage stock levels. Items below threshold are flagged for reorder.</p></div>
+    </div>
+    <!-- Add form -->
+    <div class="p-card">
+      <div class="p-card-header"><h3 class="p-card-title">Add New Item</h3></div>
+      <div class="p-card-body">
+        <form action="/admin/inventory/add" method="POST">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+          <div class="p-form-grid" style="align-items:end;">
+            <div class="p-field"><label>Item Name</label><input type="text" name="itemName" placeholder="e.g. Tire Shine" required></div>
+            <div class="p-field"><label>Current Stock</label><input type="number" name="quantity" value="0" min="0" required></div>
+            <div class="p-field"><label>Reorder Threshold</label><input type="number" name="threshold" value="10" min="0" required></div>
+            <div><button type="submit" class="p-btn p-btn-primary" style="width:100%;">+ Add Item</button></div>
+          </div>
+        </form>
+      </div>
+    </div>
+    <!-- Stock table -->
+    <div class="p-card">
+      <div class="p-table-wrap">
+        <table class="p-table">
+          <thead><tr><th>Item</th><th>Current Stock</th><th>Reorder Threshold</th><th>Status</th><th>Save</th><th>Delete</th></tr></thead>
+          <tbody>
+          <tr th:each="item : ${inventory}">
+            <form th:id="${'invf-' + item.id}" action="/admin/inventory/update" method="POST" style="display:none;">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+              <input type="hidden" name="id" th:value="${item.id}">
+            </form>
+            <td style="font-weight:600;" th:text="${item.name}">-</td>
+            <td><input type="number" class="inv-inp" name="quantity" th:value="${item.quantity}" min="0" th:form="${'invf-' + item.id}"></td>
+            <td><input type="number" class="inv-inp" name="threshold" th:value="${item.threshold}" min="0" th:form="${'invf-' + item.id}"></td>
+            <td>
+              <span th:if="${item.lowStock}"    class="p-badge p-badge-red">⚠ REORDER</span>
+              <span th:unless="${item.lowStock}" class="p-badge p-badge-green">✓ OK</span>
+            </td>
+            <td><button type="submit" th:form="${'invf-' + item.id}" class="p-btn p-btn-success p-btn-sm">💾 Save</button></td>
+            <td>
+              <form action="/admin/inventory/delete" method="POST" style="display:inline;" onsubmit="return confirm('Remove this item?')">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                <input type="hidden" name="id" th:value="${item.id}">
+                <button type="submit" class="p-btn p-btn-danger p-btn-icon">🗑️</button>
+              </form>
+            </td>
+          </tr>
+          <tr th:if="${#lists.isEmpty(inventory)}">
+            <td colspan="6" style="text-align:center;padding:40px;color:var(--p-dim);">No inventory items yet.</td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <!--  SERVICES                                                  -->
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <div id="services-section" class="tab-section" style="display:none;">
+    <div class="p-page-header">
+      <div><h1 class="p-page-title">Services &amp; Pricing</h1><p class="p-page-sub">Add, edit, or remove wash packages and prices.</p></div>
+    </div>
+
+    <!-- ── Add New Service ── -->
+    <div class="p-card" style="margin-bottom:24px;border-left:3px solid var(--p-blue);">
+      <div class="p-card-header"><h3 class="p-card-title">➕ Add New Service Package</h3></div>
+      <div class="p-card-body">
+        <form action="/admin/services/add" method="POST">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+          <div class="p-form-grid" style="align-items:end;">
+            <div class="p-field" style="max-width:80px;"><label>Icon</label>
+              <input type="text" name="icon" value="🚗" style="text-align:center;font-size:1.3rem;" required></div>
+            <div class="p-field"><label>Service Name</label>
+              <input type="text" name="name" placeholder="e.g. Premium Wash" required></div>
+            <div class="p-field p-field-full"><label>Description</label>
+              <input type="text" name="description" placeholder="What's included?" required></div>
+            <div class="p-field"><label>Price (R)</label>
+              <input type="number" name="price" placeholder="0.00" min="0" step="0.01" required></div>
+            <div><button type="submit" class="p-btn p-btn-primary" style="width:100%;">+ Add Package</button></div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- ── Existing Services ── -->
+    <div th:if="${#lists.isEmpty(services)}"
+         style="text-align:center;padding:40px;color:var(--p-dim);">No service packages yet. Add one above.</div>
+    <div th:each="svc : ${services}" class="p-card" style="margin-bottom:14px;">
+      <div class="p-card-header">
+        <h3 class="p-card-title" th:text="${svc.icon + ' ' + svc.name}">Service</h3>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span class="p-badge p-badge-blue" th:text="${'R' + #numbers.formatDecimal(svc.price,1,2)}">R0</span>
+          <form action="/admin/services/delete" method="POST" style="margin:0;"
+                onsubmit="return confirm('Delete this service package?')">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+            <input type="hidden" name="id" th:value="${svc.id}">
+            <button type="submit" style="background:rgba(255,77,77,0.15);border:1px solid rgba(255,77,77,0.3);
+                    color:#ff8080;border-radius:8px;padding:5px 12px;cursor:pointer;font-size:0.78rem;">🗑 Delete</button>
+          </form>
+        </div>
+      </div>
+      <div class="p-card-body">
+        <form th:action="@{/admin/services/update}" method="POST">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+          <input type="hidden" name="id" th:value="${svc.id}">
+          <div class="p-form-grid" style="align-items:end;">
+            <div class="p-field" style="max-width:70px;"><label>Icon</label>
+              <input type="text" name="icon" th:value="${svc.icon}" style="text-align:center;font-size:1.3rem;"></div>
+            <div class="p-field"><label>Name</label>
+              <input type="text" name="name" th:value="${svc.name}" required></div>
+            <div class="p-field p-field-full"><label>Description</label>
+              <input type="text" name="description" th:value="${svc.description}"></div>
+            <div class="p-field"><label>Price (R)</label>
+              <input type="number" name="price" th:value="${svc.price}" min="0" step="0.01" required></div>
+            <div><button type="submit" class="p-btn p-btn-primary" style="width:100%;">💾 Save Changes</button></div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <!--  ANALYTICS                                                 -->
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <div id="analytics-section" class="tab-section" style="display:none;">
+    <div class="p-page-header">
+      <div><h1 class="p-page-title">Analytics</h1><p class="p-page-sub">Customer loyalty and visit statistics.</p></div>
+    </div>
+    <div class="p-card">
+      <div class="p-card-header"><h3 class="p-card-title">Customer Loyalty Board</h3>
+        <span style="font-size:0.82rem;color:var(--p-dim);">VIP = 3+ visits · Avg Rating: <strong th:text="${(avgRating != null ? #numbers.formatDecimal(avgRating,1,1) : '0.0') + '/5'}"></strong></span>
+      </div>
+      <div class="p-card-body">
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;">
+          <div th:each="entry : ${customerStats}"
+               style="background:var(--p-bg3);border:1px solid var(--p-border);border-left:3px solid var(--p-blue);border-radius:12px;padding:16px;">
+            <div style="font-weight:700;margin-bottom:4px;" th:text="${entry.key}">-</div>
+            <div style="font-size:1.6rem;font-weight:800;" th:text="${entry.value + (entry.value == 1 ? ' visit' : ' visits')}">-</div>
+            <span th:if="${entry.value >= 3}" class="vip-badge" style="margin-top:8px;display:inline-block;">⭐ VIP</span>
+          </div>
+          <p th:if="${#maps.isEmpty(customerStats)}" style="color:var(--p-dim);">No customer data yet.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <!--  STAFF                                                     -->
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <div id="staff-section" class="tab-section" style="display:none;">
+    <div class="p-page-header">
+      <div><h1 class="p-page-title">Staff</h1><p class="p-page-sub">Manage employee accounts and access levels.</p></div>
+    </div>
+    <!-- Staff list -->
+    <div class="p-card">
+      <div class="p-card-header"><h3 class="p-card-title">Staff Accounts</h3></div>
+      <div class="p-table-wrap">
+        <table class="p-table">
+          <thead><tr><th>Full Name</th><th>Username</th><th>Role</th><th>Change Password</th><th>Remove</th></tr></thead>
+          <tbody>
+          <tr th:each="s : ${staffList}">
+            <td style="font-weight:600;" th:text="${s.fullName}">-</td>
+            <td><code style="color:var(--p-blue);" th:text="${s.username}">-</code></td>
+            <td>
+              <span th:if="${s.role == 'ADMIN'}" class="p-badge p-badge-purple">ADMIN</span>
+              <span th:unless="${s.role == 'ADMIN'}" class="p-badge p-badge-blue">STAFF</span>
+            </td>
+            <td>
+              <form action="/admin/staff/change-password" method="POST" style="display:flex;gap:6px;">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                <input type="hidden" name="id" th:value="${s.id}">
+                <input type="password" name="newPassword" placeholder="New password" minlength="6" required class="p-field input" style="padding:6px 10px;background:var(--p-card);border:1px solid var(--p-border);border-radius:7px;color:white;font-family:'Outfit',sans-serif;width:140px;">
+                <button type="submit" class="p-btn p-btn-outline p-btn-sm">🔑</button>
+              </form>
+            </td>
+            <td>
+              <form action="/admin/staff/delete" method="POST" onsubmit="return confirm('Remove this staff account?')">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                <input type="hidden" name="id" th:value="${s.id}">
+                <button type="submit" class="p-btn p-btn-danger p-btn-sm">🗑️</button>
+              </form>
+            </td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <!-- Add staff -->
+    <div class="p-card">
+      <div class="p-card-header"><h3 class="p-card-title">Add New Staff Member</h3></div>
+      <div class="p-card-body">
+        <form action="/admin/staff/add" method="POST">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+          <div class="p-form-grid" style="align-items:end;">
+            <div class="p-field"><label>Full Name</label><input type="text" name="fullName" placeholder="e.g. Thabo Nkosi" required></div>
+            <div class="p-field"><label>Username</label><input type="text" name="username" placeholder="e.g. thabo1" required></div>
+            <div class="p-field"><label>Password</label><input type="password" name="password" placeholder="Min 6 chars" required minlength="6"></div>
+            <div class="p-field"><label>Role</label>
+              <select name="role"><option value="STAFF">STAFF</option><option value="ADMIN">ADMIN</option></select>
+            </div>
+            <div><button type="submit" class="p-btn p-btn-primary" style="width:100%;">➕ Add Staff</button></div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <!--  CUSTOMERS                                                 -->
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <div id="customers-section" class="tab-section" style="display:none;">
+    <div class="p-page-header">
+      <div><h1 class="p-page-title">Customers</h1><p class="p-page-sub">All registered customer accounts.</p></div>
+    </div>
+    <div class="p-card">
+      <div class="p-card-header">
+        <h3 class="p-card-title">Customer Directory</h3>
+        <input type="text" class="p-search" placeholder="🔍 Search name, email, phone…" id="customerSearch" oninput="filterCustomers(this.value)">
+      </div>
+      <div class="p-table-wrap">
+        <table class="p-table" id="customersTable">
+          <thead><tr><th>Full Name</th><th>Email</th><th>Cellphone</th><th>Bookings</th><th>Status</th><th>Edit</th><th>Delete</th></tr></thead>
+          <tbody>
+          <tr th:each="cust : ${allCustomers}" class="customer-row" th:attr="data-search=${cust.fullName + ' ' + cust.email + ' ' + cust.cellphone}">
+            <td style="font-weight:600;" th:text="${cust.fullName}">-</td>
+            <td style="font-size:0.82rem;" th:text="${cust.email}">-</td>
+            <td th:text="${cust.cellphone}">-</td>
+            <td style="text-align:center;" th:text="${customerStats.containsKey(cust.fullName) ? customerStats.get(cust.fullName) : 0}">0</td>
+            <td>
+              <span th:if="${(customerStats.containsKey(cust.fullName) ? customerStats.get(cust.fullName) : 0) >= 3}" class="p-badge p-badge-amber">⭐ VIP</span>
+              <span th:unless="${(customerStats.containsKey(cust.fullName) ? customerStats.get(cust.fullName) : 0) >= 3}" class="p-badge p-badge-gray">Regular</span>
+            </td>
+            <td>
+              <button class="p-btn p-btn-outline p-btn-sm" onclick="openEditCustomer(this)"
+                      th:attr="data-id=${cust.id},data-name=${cust.fullName},data-phone=${cust.cellphone}">✏️ Edit</button>
+            </td>
+            <td>
+              <form action="/admin/customers/delete" method="POST" onsubmit="return confirm('Delete this customer?')">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                <input type="hidden" name="id" th:value="${cust.id}">
+                <button type="submit" class="p-btn p-btn-danger p-btn-sm">🗑️</button>
+              </form>
+            </td>
+          </tr>
+          <tr th:if="${#lists.isEmpty(allCustomers)}">
+            <td colspan="7" style="text-align:center;padding:50px;color:var(--p-dim);">No registered customers yet.</td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <!-- Edit modal -->
+    <div id="editCustomerModal" class="p-modal">
+      <div class="p-modal-box">
+        <h3 class="p-modal-title">Edit Customer</h3>
+        <form action="/admin/customers/edit" method="POST">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+          <input type="hidden" name="id" id="editCustId">
+          <div class="p-field" style="margin-bottom:14px;"><label>Full Name</label><input type="text" name="fullName" id="editCustName" required></div>
+          <div class="p-field" style="margin-bottom:20px;"><label>Cellphone</label><input type="tel" name="cellphone" id="editCustPhone" required></div>
+          <div style="display:flex;gap:10px;">
+            <button type="submit" class="p-btn p-btn-primary" style="flex:1;">💾 Save</button>
+            <button type="button" class="p-btn p-btn-outline" style="flex:1;" onclick="closeEditCustomer()">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <!--  FEEDBACK / REVIEWS                                        -->
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <div id="feedback-section" class="tab-section" style="display:none;">
+    <div class="p-page-header">
+      <div><h1 class="p-page-title">Customer Reviews</h1>
+        <p class="p-page-sub">Average Rating: <strong th:text="${(avgRating != null ? #numbers.formatDecimal(avgRating,1,1) : '0.0') + ' / 5 ★'}"></strong></p>
+      </div>
+    </div>
+    <div class="p-card">
+      <div class="p-card-body">
+        <div th:each="fb : ${feedbackList}"
+             style="padding:16px;border-bottom:1px solid var(--p-border);display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">
+          <div>
+            <div style="font-weight:700;margin-bottom:4px;" th:text="${fb.customerName}">-</div>
+            <div style="color:#f59e0b;" th:text="${fb.stars}">★★★★★</div>
+            <div style="font-size:0.78rem;color:var(--p-dim);margin-top:3px;" th:text="${fb.serviceType + ' · ' + #temporals.format(fb.submittedAt,'dd MMM yyyy')}">-</div>
+            <p th:if="${fb.comment != null and !fb.comment.isEmpty()}" style="font-size:0.85rem;margin-top:6px;" th:text="${fb.comment}">-</p>
+          </div>
+          <form action="/admin/feedback/delete" method="POST" onsubmit="return confirm('Remove this review?')">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+            <input type="hidden" name="id" th:value="${fb.id}">
+            <button type="submit" class="p-btn p-btn-danger p-btn-sm">🗑️</button>
+          </form>
+        </div>
+        <p th:if="${#lists.isEmpty(feedbackList)}" style="text-align:center;padding:40px;color:var(--p-dim);">No reviews yet.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <!--  SCHEDULE                                                  -->
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <div id="schedule-section" class="tab-section" style="display:none;">
+    <div class="p-page-header"><div><h1 class="p-page-title">Staff Schedule</h1><p class="p-page-sub">This week's shift assignments.</p></div></div>
+    <div class="p-card">
+      <div class="p-card-header"><h3 class="p-card-title">Add Shift</h3></div>
+      <div class="p-card-body">
+        <form action="/admin/schedule/add" method="POST">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+          <div class="p-form-grid" style="align-items:end;">
+            <div class="p-field"><label>Staff Member</label>
+              <select name="staffId" required>
+                <option value="">-- Select --</option>
+                <option th:each="s : ${staffList}" th:value="${s.id}" th:text="${s.fullName + ' (' + s.role + ')'}">-</option>
+              </select>
+            </div>
+            <div class="p-field"><label>Work Date</label><input type="date" name="date" required></div>
+            <div class="p-field"><label>Shift Start</label><input type="time" name="shiftStart" value="08:00" required></div>
+            <div class="p-field"><label>Shift End</label><input type="time" name="shiftEnd" value="16:00" required></div>
+            <div class="p-field"><label>Notes (optional)</label><input type="text" name="notes" placeholder="e.g. Bay 1 only"></div>
+            <div><button type="submit" class="p-btn p-btn-primary" style="width:100%;">➕ Add Shift</button></div>
+          </div>
+        </form>
+      </div>
+    </div>
+    <div class="p-card">
+      <div class="p-card-header"><h3 class="p-card-title">This Week's Schedule</h3></div>
+      <div class="p-table-wrap">
+        <table class="p-table">
+          <thead><tr><th>Staff</th><th>Date</th><th>Shift</th><th>Notes</th><th>Remove</th></tr></thead>
+          <tbody>
+          <tr th:each="shift : ${weekSchedule}">
+            <td><div style="font-weight:600;" th:text="${shift.staff.fullName}">-</div><div style="font-size:0.7rem;color:var(--p-dim);" th:text="${shift.staff.role}">-</div></td>
+            <td th:text="${#temporals.format(shift.workDate,'EEE, dd MMM yyyy')}">-</td>
+            <td><span class="p-badge p-badge-green" th:text="${shift.shiftStart + ' – ' + shift.shiftEnd}">-</span></td>
+            <td style="color:var(--p-dim);font-size:0.82rem;" th:text="${shift.notes ?: '—'}">-</td>
+            <td>
+              <form action="/admin/schedule/delete" method="POST" onsubmit="return confirm('Remove this shift?')">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                <input type="hidden" name="id" th:value="${shift.id}">
+                <button type="submit" class="p-btn p-btn-danger p-btn-sm">🗑️</button>
+              </form>
+            </td>
+          </tr>
+          <tr th:if="${#lists.isEmpty(weekSchedule)}">
+            <td colspan="5" style="text-align:center;padding:40px;color:var(--p-dim);">No shifts scheduled this week.</td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <!--  NOTIFICATIONS                                             -->
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <div id="notifications-section" class="tab-section" style="display:none;">
+    <div class="p-page-header"><div><h1 class="p-page-title">Notifications</h1><p class="p-page-sub">Send manual messages and view dispatch history.</p></div></div>
+    <!-- Send form -->
+    <div class="p-card" style="border-left:3px solid var(--p-warn);">
+      <div class="p-card-header"><h3 class="p-card-title">Send Manual Notification</h3></div>
+      <div class="p-card-body">
+        <form action="/admin/notifications/dispatch" method="POST" onsubmit="triggerEmailJsBroadcast(event,this)">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+          <div class="p-form-grid" style="align-items:end;">
+            <div class="p-field"><label>Customer / Contact</label>
+              <select name="recipient" required>
+                <option value="" disabled selected>— Choose contact —</option>
+                <option th:each="b : ${bookings}" th:if="${b.cellphone != null and !b.cellphone.isEmpty()}" th:value="${b.cellphone}" th:text="${b.customerName + ' (📱 ' + b.cellphone + ')'}"></option>
+                <option th:each="b : ${bookings}" th:if="${b.email != null and !b.email.isEmpty()}" th:value="${b.email}" th:text="${b.customerName + ' (📧 ' + b.email + ')'}"></option>
+              </select>
+            </div>
+            <div class="p-field"><label>Channel</label>
+              <select name="type"><option value="SMS">📱 SMS</option><option value="EMAIL">📧 Email</option></select>
+            </div>
+            <div class="p-field p-field-full"><label>Message</label><input type="text" name="messageContent" placeholder="Type your message…" required></div>
+            <div><button type="submit" class="p-btn p-btn-primary">🚀 Send</button></div>
+          </div>
+        </form>
+      </div>
+    </div>
+    <!-- Log -->
+    <div class="p-card">
+      <div class="p-card-header"><h3 class="p-card-title">Notification Log</h3></div>
+      <div class="p-table-wrap">
+        <table class="p-table">
+          <thead><tr><th>#</th><th>Channel</th><th>Recipient</th><th>Message</th><th>Sent At</th><th>Status</th></tr></thead>
+          <tbody>
+          <tr th:each="log : ${notifications}">
+            <td style="color:var(--p-dim);font-size:0.8rem;" th:text="${'#' + log.id}">-</td>
+            <td>
+              <span th:if="${log.type == 'SMS'}" class="p-badge p-badge-blue">📱 SMS</span>
+              <span th:if="${log.type == 'EMAIL'}" class="p-badge p-badge-amber">📧 Email</span>
+            </td>
+            <td style="font-weight:600;font-size:0.85rem;" th:text="${log.recipient}">-</td>
+            <td style="max-width:340px;font-size:0.8rem;color:rgba(255,255,255,0.7);white-space:pre-wrap;" th:text="${log.message}">-</td>
+            <td style="font-size:0.8rem;color:var(--p-dim);" th:text="${#temporals.format(log.timestamp,'dd MMM yyyy, HH:mm')}">-</td>
+            <td><span class="p-badge p-badge-green">✓ <span th:text="${log.status}">Logged</span></span></td>
+          </tr>
+          <tr th:if="${#lists.isEmpty(notifications)}">
+            <td colspan="6" style="text-align:center;padding:50px;color:var(--p-dim);">No notifications yet.</td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /p-content -->
+</main>
+
+<!-- ── Toast container ───────────────────────────────────────── -->
+<div class="p-toast" id="toastContainer"></div>
+
+<!-- ── Scripts ──────────────────────────────────────────────── -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script th:inline="javascript">
+/*<![CDATA[*/
+
+// ── Tab switching ──────────────────────────────────────────────
+function showTab(id, btn) {
+  document.querySelectorAll('.tab-section').forEach(s => s.style.display = 'none');
+  document.querySelectorAll('.p-nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById(id).style.display = 'block';
+  if (btn) btn.classList.add('active');
+  else {
+    const navId = 'nav-' + id.replace('-section','');
+    const el = document.getElementById(navId);
+    if (el) el.classList.add('active');
+  }
+}
+
+// ── URL hash routing ───────────────────────────────────────────
+window.addEventListener('load', function() {
+  const hash = location.hash.replace('#','');
+  const validTabs = ['dashboard','bookings','inventory','services','analytics','staff','customers','feedback','schedule','notifications'];
+  const matched = validTabs.find(t => hash.startsWith(t + '-section') || hash === t);
+  if (matched) showTab(matched + '-section', null);
+  initCharts();
+});
+
+// ── Charts ─────────────────────────────────────────────────────
+function initCharts() {
+  var revData = /*[[${revenueByService}]]*/ {};
+  var bkData  = /*[[${bookingCountByService}]]*/ {};
+
+  const palette = ['#1a6cff','#22c55e','#f59e0b','#ef4444','#a855f7','#06b6d4'];
+  const labels  = Object.keys(revData);
+
+  if (labels.length && document.getElementById('revenueChart')) {
+    new Chart(document.getElementById('revenueChart'), {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [{ label: 'Revenue (R)', data: labels.map(k => revData[k] || 0),
+          backgroundColor: palette, borderRadius: 6 }]
+      },
+      options: { plugins: { legend: { display: false } }, responsive: true,
+        scales: { x: { ticks: { color: '#888' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                  y: { ticks: { color: '#888', callback: v => 'R'+v }, grid: { color: 'rgba(255,255,255,0.05)' } } } }
+    });
+  }
+
+  const bkLabels = Object.keys(bkData);
+  if (bkLabels.length && document.getElementById('bookingsChart')) {
+    new Chart(document.getElementById('bookingsChart'), {
+      type: 'doughnut',
+      data: {
+        labels: bkLabels,
+        datasets: [{ data: bkLabels.map(k => bkData[k] || 0), backgroundColor: palette, borderWidth: 0 }]
+      },
+      options: { plugins: { legend: { position: 'bottom', labels: { color: '#888' } } }, cutout: '60%' }
+    });
+  }
+}
+
+// ── Status select colouring ────────────────────────────────────
+document.querySelectorAll('.status-sel').forEach(function(sel) {
+  function color() {
+    sel.className = 'status-sel';
+    sel.classList.add(sel.value === 'Completed' ? 'ss-completed' : sel.value === 'Cancelled' ? 'ss-cancelled' : sel.value === 'In Progress' ? 'ss-inprog' : 'ss-pending');
+  }
+  color();
+  sel.addEventListener('change', color);
+});
+
+// ── Customer search / filter ───────────────────────────────────
+function filterCustomers(q) {
+  document.querySelectorAll('.customer-row').forEach(function(row) {
+    row.style.display = row.dataset.search.toLowerCase().includes(q.toLowerCase()) ? '' : 'none';
+  });
+}
+
+// ── Customer edit modal ────────────────────────────────────────
+function openEditCustomer(btn) {
+  document.getElementById('editCustId').value    = btn.dataset.id;
+  document.getElementById('editCustName').value  = btn.dataset.name;
+  document.getElementById('editCustPhone').value = btn.dataset.phone;
+  document.getElementById('editCustomerModal').classList.add('open');
+}
+function closeEditCustomer() {
+  document.getElementById('editCustomerModal').classList.remove('open');
+}
+document.getElementById('editCustomerModal').addEventListener('click', function(e) {
+  if (e.target === this) closeEditCustomer();
+});
+
+// ── EmailJS ────────────────────────────────────────────────────
+emailjs.init('bUPRN3KSh0wnf7wMT');
+
+function triggerEmailJs(event, formEl) {
+  event.preventDefault();
+  var recipient = formEl.recipient.value, msg = formEl.messageContent.value,
+      name = formEl.dataset.customer || 'Customer',
+      svc  = formEl.dataset.service  || '',
+      ref  = formEl.dataset.ref      || '',
+      time = formEl.dataset.time     || '',
+      amt  = formEl.dataset.amount   || '';
+  var btn = formEl.querySelector('button[type="submit"]');
+  btn.disabled = true; btn.textContent = '⏳';
+
+  emailjs.send('service_6zzoal6','template_k0p4ymf',{
+    to_name: name, name: name, to_email: recipient, email: recipient,
+    user_email: recipient, reply_to: 'marvinnicolasmathebula@gmail.com',
+    bcc_email: 'marvinnicolasmathebula@gmail.com',
+    service_type: svc, booking_time: time, booking_ref: ref, amount: amt, message: msg
+  }).then(function() {
+    btn.textContent = '✓ Sent'; btn.style.color = 'var(--p-success)';
+    setTimeout(function() { formEl.submit(); }, 700);
+  }, function(err) {
+    console.error(err); formEl.submit();
+  });
+}
+
+function triggerEmailJsBroadcast(event, formEl) {
+  if (formEl.type.value !== 'EMAIL') return;
+  event.preventDefault();
+  var recipient = formEl.recipient.value, msg = formEl.messageContent.value;
+  var label = formEl.recipient.options[formEl.recipient.selectedIndex].text.split(' (')[0];
+  var btn = formEl.querySelector('button[type="submit"]');
+  btn.disabled = true; btn.textContent = '⏳';
+
+  emailjs.send('service_6zzoal6','template_k0p4ymf',{
+    to_name: label, name: label, to_email: recipient, email: recipient,
+    user_email: recipient, reply_to: 'marvinnicolasmathebula@gmail.com',
+    bcc_email: 'marvinnicolasmathebula@gmail.com',
+    service_type: 'Admin Notice', booking_time: new Date().toLocaleString('en-ZA'),
+    booking_ref: 'ADMIN', amount: '', message: msg
+  }).then(function() {
+    btn.textContent = '✓ Sent'; btn.style.color = 'var(--p-success)';
+    setTimeout(function() { formEl.submit(); }, 700);
+  }, function(err) {
+    console.error(err); formEl.submit();
+  });
+}
+
+// ── Toast ──────────────────────────────────────────────────────
+function toast(msg, type) {
+  type = type || 'info';
+  var el = document.createElement('div');
+  el.className = 'p-toast-item ' + type;
+  el.textContent = msg;
+  document.getElementById('toastContainer').appendChild(el);
+  setTimeout(function() { el.remove(); }, 4000);
+}
+/*]]>*/
+</script>
+</body>
+</html>

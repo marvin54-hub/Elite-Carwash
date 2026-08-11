@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Witbank Elite — Business Report</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #222; padding: 40px; line-height: 1.6; background: #fff; }
+
+        /* Header */
+        .rpt-header { text-align: center; border-bottom: 3px solid #000; padding-bottom: 20px; margin-bottom: 35px; }
+        .rpt-header h1 { font-size: 26px; letter-spacing: 3px; margin-bottom: 4px; }
+        .rpt-header .subtitle { color: #555; font-size: 14px; }
+
+        /* KPI boxes */
+        .kpi-row { display: flex; gap: 15px; margin-bottom: 35px; }
+        .kpi-box { flex: 1; text-align: center; background: #f5f5f5; border: 1px solid #ddd; padding: 18px 10px; border-radius: 6px; }
+        .kpi-box h4 { font-size: 11px; text-transform: uppercase; color: #777; margin-bottom: 8px; letter-spacing: 0.5px; }
+        .kpi-box p  { font-size: 22px; font-weight: 700; }
+
+        /* Section headings */
+        .section-heading { font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #333; margin-bottom: 12px; padding-bottom: 6px; border-bottom: 1px solid #ddd; }
+
+        /* Tables */
+        table { width: 100%; border-collapse: collapse; margin-bottom: 35px; font-size: 13px; }
+        th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #eee; }
+        th { background: #f0f0f0; font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; color: #444; }
+        tr:last-child td { border-bottom: none; }
+
+        /* Service breakdown */
+        .breakdown-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 35px; }
+        .breakdown-card { border: 1px solid #ddd; border-radius: 6px; padding: 14px 16px; background: #fafafa; }
+        .breakdown-card .svc-name { font-weight: 700; margin-bottom: 4px; }
+        .breakdown-card .svc-count { font-size: 12px; color: #666; }
+        .breakdown-card .svc-rev   { font-size: 18px; font-weight: 800; color: #0056b3; margin-top: 6px; }
+
+        /* Footer */
+        .rpt-footer { text-align: center; font-size: 11px; color: #aaa; margin-top: 50px; padding-top: 18px; border-top: 1px solid #eee; }
+
+        /* Print controls */
+        .no-print { text-align: right; margin-bottom: 20px; }
+        .btn-print { background: #222; color: #fff; padding: 10px 22px; border: none; border-radius: 5px; cursor: pointer; font-weight: 700; font-size: 14px; }
+        .btn-back  { color: #555; text-decoration: none; margin-left: 20px; font-size: 14px; }
+
+        @media print {
+            .no-print { display: none; }
+            body { padding: 0; }
+            .kpi-box, .breakdown-card { border: 1px solid #ccc !important; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="no-print">
+    <button class="btn-print" onclick="window.print()">🖨️ Print / Save as PDF</button>
+    <a href="/admin/dashboard" class="btn-back">← Back to Dashboard</a>
+</div>
+
+<!-- ── Header ──────────────────────────────────────────────────── -->
+<div class="rpt-header">
+    <h1>WITBANK ELITE CAR WASH</h1>
+    <p class="subtitle">Official Operational System Report</p>
+    <p class="subtitle" th:text="${'Generated: ' + date}" style="margin-top:4px;font-weight:600;">Generated:</p>
+</div>
+
+<!-- ── KPI Summary ─────────────────────────────────────────────── -->
+<div class="kpi-row">
+    <div class="kpi-box">
+        <h4>Total Revenue</h4>
+        <p th:text="${'R' + #numbers.formatDecimal(totalRevenue, 1, 2)}">R0.00</p>
+    </div>
+    <div class="kpi-box">
+        <h4>Total Bookings</h4>
+        <p th:text="${totalBookings}">0</p>
+    </div>
+    <div class="kpi-box">
+        <h4>Avg. Revenue / Booking</h4>
+        <p th:text="${totalBookings > 0 ? 'R' + #numbers.formatDecimal(totalRevenue / totalBookings, 1, 2) : 'R0.00'}">R0.00</p>
+    </div>
+    <div class="kpi-box">
+        <h4>Location</h4>
+        <p style="font-size:14px;padding-top:4px;">Witbank, Mpumalanga</p>
+    </div>
+</div>
+
+<!-- ── Revenue by Service ──────────────────────────────────────── -->
+<div class="section-heading">Revenue Breakdown by Service</div>
+<div class="breakdown-grid">
+    <div th:each="entry : ${revenueByService}" class="breakdown-card">
+        <div class="svc-name" th:text="${entry.key}">Service</div>
+        <div class="svc-count"
+             th:text="${(bookingsByService[entry.key] != null ? bookingsByService[entry.key] : 0) + ' booking(s)'}">0 bookings</div>
+        <div class="svc-rev" th:text="${'R' + #numbers.formatDecimal(entry.value, 1, 2)}">R0.00</div>
+    </div>
+    <div th:if="${#maps.isEmpty(revenueByService)}" class="breakdown-card">
+        <div class="svc-name" style="color:#aaa;">No bookings recorded yet.</div>
+    </div>
+</div>
+
+<!-- ── Booking Detail Log ──────────────────────────────────────── -->
+<div class="section-heading">Detailed Booking Log</div>
+<table>
+    <thead>
+    <tr>
+        <th>Ref #</th>
+        <th>Customer</th>
+        <th>Contact</th>
+        <th>Service</th>
+        <th>Date &amp; Time</th>
+        <th>Status</th>
+        <th>Amount</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:each="booking : ${bookings}">
+        <td th:text="${'WBE-' + booking.id}" style="color:#777;font-size:11px;">ID</td>
+        <td th:text="${booking.customerName}">Name</td>
+        <td>
+            <span th:text="${booking.cellphone != null and !booking.cellphone.isEmpty() ? booking.cellphone : '—'}"></span>
+            <br>
+            <span th:text="${booking.email != null and !booking.email.isEmpty() ? booking.email : ''}"
+                  style="font-size:11px;color:#777;"></span>
+        </td>
+        <td th:text="${booking.serviceType}">Service</td>
+        <td th:text="${#temporals.format(booking.bookingTime, 'dd MMM yyyy, HH:mm')}">Time</td>
+        <td th:text="${booking.status}">Status</td>
+        <td th:text="${'R' + #numbers.formatDecimal(booking.price, 1, 2)}">R0.00</td>
+    </tr>
+    <tr th:if="${#lists.isEmpty(bookings)}">
+        <td colspan="7" style="text-align:center;padding:40px;color:#aaa;">
+            No bookings recorded for this period.
+        </td>
+    </tr>
+    </tbody>
+</table>
+
+<!-- ── Footer ──────────────────────────────────────────────────── -->
+<div class="rpt-footer">
+    <p>Witbank Elite Car Wash Management System — Version 1.0</p>
+    <p>Confidential Business Document · For Internal Use Only</p>
+</div>
+
+</body>
+</html>

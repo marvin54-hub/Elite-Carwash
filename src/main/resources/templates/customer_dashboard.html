@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>My Account | Witbank Elite</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        *{box-sizing:border-box;margin:0;padding:0}
+        :root{--cyan:#00d2ff;--bg:#0b1120;--card:rgba(255,255,255,0.05);--border:rgba(255,255,255,0.1);--dim:rgba(255,255,255,0.45)}
+        body{background:var(--bg);color:#fff;font-family:'Outfit',sans-serif;min-height:100vh}
+        .topbar{display:flex;justify-content:space-between;align-items:center;padding:16px 32px;
+                border-bottom:1px solid var(--border);background:rgba(0,0,0,0.4);
+                position:sticky;top:0;z-index:100;backdrop-filter:blur(12px)}
+        .logo{font-size:1.2rem;font-weight:800;letter-spacing:1px}.logo span{color:var(--cyan)}
+        .nav-right{display:flex;align-items:center;gap:12px}
+        a.btn,button.btn{padding:8px 18px;border-radius:8px;border:none;cursor:pointer;font-family:'Outfit',sans-serif;font-size:0.82rem;font-weight:600;text-decoration:none;display:inline-block}
+        .btn-cyan{background:linear-gradient(135deg,var(--cyan),#0099bb);color:#000}
+        .btn-outline{background:transparent;border:1px solid var(--border);color:rgba(255,255,255,0.7)}
+        .btn-danger{background:rgba(255,77,77,0.15);border:1px solid rgba(255,77,77,0.3);color:#ff8080}
+        .btn-amber{background:rgba(255,170,0,0.15);border:1px solid rgba(255,170,0,0.3);color:#ffaa00}
+        .dash-wrap{display:flex;max-width:1200px;margin:28px auto;padding:0 20px;gap:22px}
+        .sidebar{width:210px;flex-shrink:0}
+        .sidebar-card{background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden}
+        .avatar-block{background:linear-gradient(135deg,var(--cyan),#0044cc);text-align:center;padding:22px 12px}
+        .avatar-init{font-size:2rem;font-weight:800}
+        .av-name{font-size:0.88rem;font-weight:600;margin-top:5px}
+        .av-email{font-size:0.7rem;color:rgba(255,255,255,0.65);margin-top:3px;word-break:break-all}
+        .nav-item{display:flex;align-items:center;gap:10px;padding:12px 18px;cursor:pointer;
+                  font-size:0.86rem;color:var(--dim);border-left:3px solid transparent;transition:0.15s}
+        .nav-item:hover{color:#fff;background:rgba(255,255,255,0.04)}
+        .nav-item.active{color:var(--cyan);border-left-color:var(--cyan);background:rgba(0,210,255,0.07);font-weight:600}
+        .content{flex:1;min-width:0}
+        .panel{display:none}.panel.active{display:block}
+        .sec-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:26px 28px;margin-bottom:20px}
+        .sec-title{font-size:1.05rem;font-weight:700;margin-bottom:18px}
+        .sec-title span{color:var(--cyan)}
+        .field-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+        .field-group{display:flex;flex-direction:column;gap:5px}
+        .field-group.full{grid-column:1/-1}
+        label.fl{font-size:0.72rem;text-transform:uppercase;letter-spacing:1px;color:var(--dim)}
+        input.fi,select.fi{padding:11px 14px;background:rgba(255,255,255,0.06);border:1px solid var(--border);
+                           border-radius:9px;color:#fff;font-family:'Outfit',sans-serif;font-size:0.9rem;width:100%}
+        input.fi:focus,select.fi:focus{outline:none;border-color:var(--cyan)}
+        input.fi:disabled{opacity:0.4;cursor:not-allowed}
+        .loyalty-bar-bg{background:rgba(255,255,255,0.08);border-radius:8px;height:10px;overflow:hidden;margin:10px 0}
+        .loyalty-bar-fill{height:100%;background:linear-gradient(135deg,var(--cyan),#0099bb);border-radius:8px}
+        .pts-big{font-size:2.4rem;font-weight:800;color:var(--cyan)}
+        .vehicle-chip{display:flex;justify-content:space-between;align-items:center;
+                      background:rgba(255,255,255,0.04);border:1px solid var(--border);
+                      border-radius:12px;padding:13px 16px;margin-bottom:10px}
+        .vc-reg{font-weight:700;font-size:0.95rem}
+        .vc-detail{font-size:0.78rem;color:var(--dim);margin-top:2px}
+        table.bt{width:100%;border-collapse:collapse;font-size:0.83rem}
+        table.bt th{text-align:left;padding:10px 10px;color:var(--dim);font-weight:600;border-bottom:1px solid var(--border)}
+        table.bt td{padding:11px 10px;border-bottom:1px solid rgba(255,255,255,0.05);vertical-align:top}
+        .badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:0.72rem;font-weight:700}
+        .b-paid{background:rgba(0,255,150,0.12);color:#4dffaa}
+        .b-unpaid{background:rgba(255,170,0,0.12);color:#ffaa00}
+        .b-done{background:rgba(0,210,255,0.12);color:#00d2ff}
+        .b-pend{background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.6)}
+        .b-cancel{background:rgba(255,77,77,0.12);color:#ff8080}
+        .star-btn{background:none;border:none;font-size:1.1rem;cursor:pointer;color:rgba(255,255,255,0.2);transition:0.1s}
+        .star-btn.on{color:#ffaa00}
+        .alert-success{background:rgba(0,255,150,0.08);border:1px solid rgba(0,255,150,0.25);color:#4dffaa;
+                       border-radius:10px;padding:12px 16px;margin-bottom:16px;font-size:0.88rem}
+        .alert-error{background:rgba(255,77,77,0.1);border:1px solid rgba(255,77,77,0.3);color:#ff8080;
+                     border-radius:10px;padding:12px 16px;margin-bottom:16px;font-size:0.88rem}
+        .action-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+        .book-hero{background:linear-gradient(135deg,rgba(0,210,255,0.1),rgba(0,100,200,0.1));
+                   border:1px solid rgba(0,210,255,0.25);border-radius:18px;padding:36px;text-align:center}
+        .book-hero h3{font-size:1.3rem;margin-bottom:8px}
+        .book-hero p{color:var(--dim);font-size:0.9rem;margin-bottom:22px}
+        @media(max-width:700px){.dash-wrap{flex-direction:column}.sidebar{width:100%}.field-grid{grid-template-columns:1fr}}
+    </style>
+</head>
+<body>
+<div class="topbar">
+    <div class="logo">WITBANK <span>ELITE</span></div>
+    <div class="nav-right">
+        <span style="font-size:0.88rem;color:var(--dim);">Hello, <strong th:text="${customerUser.fullName.split(' ')[0]}" style="color:#fff;">there</strong></span>
+        <a href="/" class="btn btn-outline" style="font-size:0.78rem;padding:6px 12px;">🏠 Home</a>
+        <a href="/customer/logout" class="btn btn-danger" style="font-size:0.78rem;padding:6px 12px;">Sign Out</a>
+    </div>
+</div>
+
+<div class="dash-wrap">
+    <aside class="sidebar">
+        <div class="sidebar-card">
+            <div class="avatar-block">
+                <div class="avatar-init" th:text="${customerUser.fullName != null and !customerUser.fullName.isEmpty() ? customerUser.fullName.substring(0,1).toUpperCase() : '?'}">A</div>
+                <div class="av-name" th:text="${customerUser.fullName}">Name</div>
+                <div class="av-email" th:text="${customerUser.email}">email</div>
+            </div>
+            <div class="nav-item active" id="nav-profile"   onclick="showPanel('profile')">👤 My Profile</div>
+            <div class="nav-item"         id="nav-loyalty"  onclick="showPanel('loyalty')">🏆 Loyalty Rewards</div>
+            <div class="nav-item"         id="nav-vehicles" onclick="showPanel('vehicles')">🚗 My Vehicles</div>
+            <div class="nav-item"         id="nav-book"     onclick="showPanel('book')">📅 Book Appointment</div>
+            <div class="nav-item"         id="nav-bookings" onclick="showPanel('bookings')">📋 My Bookings</div>
+        </div>
+    </aside>
+
+    <div class="content">
+
+        <!-- ── Alerts ─────────────────────────── -->
+        <div th:if="${bookingMsg}"      class="alert-success" th:text="${bookingMsg}"></div>
+        <div th:if="${passwordSuccess}" class="alert-success" th:text="${passwordSuccess}"></div>
+        <div th:if="${passwordError}"   class="alert-error"   th:text="${passwordError}"></div>
+
+        <!-- ══════════════════════════════════════ -->
+        <!-- PROFILE                                -->
+        <!-- ══════════════════════════════════════ -->
+        <div class="panel active" id="panel-profile">
+            <div class="sec-card">
+                <div class="sec-title">👤 My <span>Profile</span></div>
+                <form action="/customer/profile/update" method="POST">
+                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                    <div class="field-grid">
+                        <div class="field-group">
+                            <label class="fl">Full Name</label>
+                            <input class="fi" type="text" name="fullName" th:value="${customerUser.fullName}" required>
+                        </div>
+                        <div class="field-group">
+                            <label class="fl">Cellphone</label>
+                            <input class="fi" type="tel" name="cellphone" th:value="${customerUser.cellphone}" required>
+                        </div>
+                        <div class="field-group full">
+                            <label class="fl">Email (cannot be changed)</label>
+                            <input class="fi" type="email" th:value="${customerUser.email}" disabled>
+                        </div>
+                    </div>
+                    <div style="margin-top:16px;"><button type="submit" class="btn btn-cyan">Save Changes</button></div>
+                </form>
+            </div>
+            <div class="sec-card">
+                <div class="sec-title">🔑 Change <span>Password</span></div>
+                <form action="/customer/profile/change-password" method="POST">
+                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                    <div class="field-grid">
+                        <div class="field-group full">
+                            <label class="fl">Current Password</label>
+                            <input class="fi" type="password" name="currentPassword" required>
+                        </div>
+                        <div class="field-group">
+                            <label class="fl">New Password (min 6 chars)</label>
+                            <input class="fi" type="password" name="newPassword" minlength="6" required>
+                        </div>
+                        <div class="field-group">
+                            <label class="fl">Confirm New Password</label>
+                            <input class="fi" type="password" name="confirmPassword" required>
+                        </div>
+                    </div>
+                    <div style="margin-top:16px;"><button type="submit" class="btn btn-outline">Update Password</button></div>
+                </form>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════ -->
+        <!-- LOYALTY                                -->
+        <!-- ══════════════════════════════════════ -->
+        <div class="panel" id="panel-loyalty">
+            <div class="sec-card">
+                <div class="sec-title">🏆 Loyalty <span>Rewards</span></div>
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:16px;">
+                    <div>
+                        <div class="pts-big" th:text="${customerUser.loyaltyPoints}">0</div>
+                        <div style="font-size:0.8rem;color:var(--dim);margin-top:4px;">points available</div>
+                        <div style="font-size:0.82rem;color:rgba(255,255,255,0.55);margin-top:8px;">
+                            Earn <strong style="color:var(--cyan);">1 point per R10</strong> spent on completed washes
+                        </div>
+                    </div>
+                    <form action="/customer/loyalty/redeem" method="POST">
+                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                        <button type="submit" class="btn btn-cyan"
+                                th:disabled="${customerUser.loyaltyPoints < 100}"
+                                th:style="${customerUser.loyaltyPoints < 100} ? 'opacity:0.45;cursor:not-allowed;' : ''">
+                            Redeem 100 pts → R50 Voucher
+                        </button>
+                    </form>
+                </div>
+                <div class="loyalty-bar-bg">
+                    <div class="loyalty-bar-fill"
+                         th:style="'width:' + ${customerUser.loyaltyPoints >= 100 ? 100 : customerUser.loyaltyPoints} + '%;'"></div>
+                </div>
+                <div style="display:flex;justify-content:space-between;font-size:0.72rem;color:rgba(255,255,255,0.3);">
+                    <span>0</span><span>100 pts</span>
+                </div>
+                <div style="margin-top:20px;padding:16px;background:rgba(255,255,255,0.03);border-radius:12px;font-size:0.82rem;color:rgba(255,255,255,0.55);line-height:1.8;">
+                    ✅ Book any wash → ✅ Staff marks Completed → ✅ Points added automatically<br>
+                    ⭐ <strong>VIP status</strong> (3+ completed washes) = <strong style="color:var(--cyan);">10% discount</strong> on future bookings
+                </div>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════ -->
+        <!-- MY VEHICLES                            -->
+        <!-- ══════════════════════════════════════ -->
+        <div class="panel" id="panel-vehicles">
+            <div class="sec-card">
+                <div class="sec-title">🚗 My <span>Vehicles</span></div>
+                <div th:if="${#lists.isEmpty(vehicles)}" style="color:var(--dim);font-size:0.88rem;margin-bottom:16px;">
+                    No vehicles saved yet — add one below.
+                </div>
+                <div th:each="v : ${vehicles}" class="vehicle-chip">
+                    <div>
+                        <div class="vc-reg" th:text="${v.regPlate}">REG</div>
+                        <div class="vc-detail" th:text="${v.make + ' ' + v.model + (v.color != null and !v.color.isEmpty() ? ' · ' + v.color : '')}">Detail</div>
+                    </div>
+                    <form action="/customer/vehicles/delete" method="POST" onsubmit="return confirm('Remove this vehicle?')">
+                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                        <input type="hidden" name="id" th:value="${v.id}">
+                        <button type="submit" class="btn btn-danger" style="font-size:0.78rem;padding:6px 12px;">Remove</button>
+                    </form>
+                </div>
+                <div style="border-top:1px solid var(--border);margin-top:18px;padding-top:18px;">
+                    <div style="font-size:0.9rem;font-weight:600;margin-bottom:12px;">Add a Vehicle</div>
+                    <form action="/customer/vehicles/add" method="POST">
+                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                        <div class="field-grid">
+                            <div class="field-group"><label class="fl">Make</label>
+                                <input class="fi" type="text" name="make" placeholder="e.g. Toyota" required></div>
+                            <div class="field-group"><label class="fl">Model</label>
+                                <input class="fi" type="text" name="model_" placeholder="e.g. Corolla" required></div>
+                            <div class="field-group"><label class="fl">Registration Plate</label>
+                                <input class="fi" type="text" name="regPlate" placeholder="e.g. MP 123-456"
+                                       oninput="this.value=this.value.toUpperCase()" required></div>
+                            <div class="field-group"><label class="fl">Color (optional)</label>
+                                <input class="fi" type="text" name="color" placeholder="e.g. White"></div>
+                        </div>
+                        <div style="margin-top:14px;"><button type="submit" class="btn btn-outline">+ Add Vehicle</button></div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════ -->
+        <!-- BOOK APPOINTMENT                       -->
+        <!-- ══════════════════════════════════════ -->
+        <div class="panel" id="panel-book">
+            <div class="book-hero">
+                <div style="font-size:3rem;margin-bottom:10px;">📅</div>
+                <h3>Reserve Your Slot</h3>
+                <p>Choose a service, pick a date and time, and confirm your booking instantly.</p>
+                <a href="/#booking" class="btn btn-cyan" style="padding:13px 32px;font-size:0.95rem;">Book Now →</a>
+            </div>
+            <div class="sec-card" th:if="${!#lists.isEmpty(vehicles)}" style="margin-top:20px;">
+                <div class="sec-title" style="margin-bottom:12px;">🚗 Your Saved Vehicles</div>
+                <p style="font-size:0.83rem;color:var(--dim);margin-bottom:14px;">
+                    Your saved vehicles are pre-selectable on the booking form.
+                </p>
+                <div th:each="v : ${vehicles}" class="vehicle-chip">
+                    <div><div class="vc-reg" th:text="${v.regPlate}">REG</div>
+                        <div class="vc-detail" th:text="${v.make + ' ' + v.model}">Make</div></div>
+                    <a href="/#booking" class="btn btn-outline" style="font-size:0.78rem;padding:6px 12px;">Book →</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════ -->
+        <!-- MY BOOKINGS                            -->
+        <!-- ══════════════════════════════════════ -->
+        <div class="panel" id="panel-bookings">
+            <div class="sec-card">
+                <div class="sec-title">📋 My <span>Bookings</span></div>
+                <div th:if="${#lists.isEmpty(bookings)}"
+                     style="text-align:center;padding:40px;color:var(--dim);">
+                    No bookings yet. <a href="/#booking" style="color:var(--cyan);">Book your first wash →</a>
+                </div>
+                <div th:unless="${#lists.isEmpty(bookings)}" style="overflow-x:auto;">
+                    <table class="bt">
+                        <thead>
+                            <tr><th>Ref</th><th>Service</th><th>Vehicle</th><th>Date &amp; Time</th>
+                                <th>Amount</th><th>Status</th><th>Payment</th><th>Actions</th></tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="b : ${bookings}">
+                            <td style="color:var(--dim);font-size:0.78rem;" th:text="${'#WE-'+b.id}">-</td>
+                            <td style="font-weight:600;" th:text="${b.serviceType}">-</td>
+                            <td style="font-size:0.8rem;color:var(--dim);"
+                                th:text="${vehicleLabels.get(b.id) != null ? vehicleLabels.get(b.id) :
+                                          (b.vehicleReg != null and !b.vehicleReg.isEmpty() ? b.vehicleReg : '—')}">—</td>
+                            <td style="font-size:0.82rem;" th:text="${#temporals.format(b.bookingTime,'dd MMM yyyy, HH:mm')}">-</td>
+                            <td th:text="${'R'+#numbers.formatDecimal(b.price,1,2)}">R0</td>
+                            <td>
+                                <span class="badge"
+                                      th:classappend="${b.status=='Completed'} ? 'b-done' : ${b.status=='Cancelled'} ? 'b-cancel' : 'b-pend'"
+                                      th:text="${b.status}">-</span>
+                            </td>
+                            <td>
+                                <span th:if="${b.paid}" class="badge b-paid">✓ Paid</span>
+                                <span th:unless="${b.paid}" class="badge b-unpaid">Unpaid</span>
+                                <form th:unless="${b.paid or b.status=='Cancelled'}"
+                                      action="/customer/payment/pay" method="POST" style="margin-top:5px;">
+                                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                                    <input type="hidden" name="bookingId" th:value="${b.id}">
+                                    <input type="hidden" name="amount" th:value="${b.price}">
+                                    <select name="method" class="fi" style="font-size:0.75rem;padding:4px 8px;margin-bottom:4px;">
+                                        <option value="CARD">Card (sim)</option>
+                                        <option value="EFT">EFT (sim)</option>
+                                        <option value="CASH_ON_SITE">Cash on site</option>
+                                    </select>
+                                    <button type="submit" class="btn btn-cyan" style="font-size:0.75rem;padding:5px 10px;width:100%;">Pay</button>
+                                </form>
+                            </td>
+                            <!-- Actions: Reschedule / Cancel / Delete -->
+                            <td>
+                                <div class="action-row">
+                                    <!-- Reschedule (if Pending or In Progress) -->
+                                    <div th:if="${b.status=='Pending' or b.status=='In Progress'}">
+                                        <form action="/customer/bookings/reschedule" method="POST">
+                                            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                                            <input type="hidden" name="bookingId" th:value="${b.id}">
+                                            <input type="datetime-local" name="newTime" class="fi"
+                                                   style="font-size:0.73rem;padding:4px 8px;margin-bottom:4px;"
+                                                   th:value="${#temporals.format(b.bookingTime,'yyyy-MM-dd') + 'T' + #temporals.format(b.bookingTime,'HH:mm')}"
+                                                   required>
+                                            <button type="submit" class="btn btn-amber" style="font-size:0.73rem;padding:5px 10px;width:100%;">📅 Reschedule</button>
+                                        </form>
+                                    </div>
+                                    <!-- Cancel (if not already cancelled/completed) -->
+                                    <form th:if="${b.status!='Cancelled' and b.status!='Completed'}"
+                                          action="/customer/bookings/cancel" method="POST"
+                                          onsubmit="return confirm('Cancel this booking?')">
+                                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                                        <input type="hidden" name="bookingId" th:value="${b.id}">
+                                        <button type="submit" class="btn btn-danger" style="font-size:0.73rem;padding:5px 10px;">✕ Cancel</button>
+                                    </form>
+                                    <!-- Delete (only if Cancelled) -->
+                                    <form th:if="${b.status=='Cancelled'}"
+                                          action="/customer/bookings/delete" method="POST"
+                                          onsubmit="return confirm('Permanently delete this booking?')">
+                                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                                        <input type="hidden" name="bookingId" th:value="${b.id}">
+                                        <button type="submit" class="btn btn-danger" style="font-size:0.73rem;padding:5px 10px;">🗑 Delete</button>
+                                    </form>
+                                </div>
+                                <!-- Feedback -->
+                                <div th:unless="${feedbackGiven.get(b.id)}" style="margin-top:8px;">
+                                    <form action="/customer/feedback/add" method="POST">
+                                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                                        <input type="hidden" name="bookingId" th:value="${b.id}">
+                                        <div id="stars-[[${b.id}]]" style="display:flex;gap:2px;margin-bottom:4px;">
+                                            <input type="hidden" name="rating" th:id="'r-'+${b.id}" value="5">
+                                            <button type="button" class="star-btn on" th:onclick="'setStar(' + ${b.id} + ',1)'">★</button>
+                                            <button type="button" class="star-btn on" th:onclick="'setStar(' + ${b.id} + ',2)'">★</button>
+                                            <button type="button" class="star-btn on" th:onclick="'setStar(' + ${b.id} + ',3)'">★</button>
+                                            <button type="button" class="star-btn on" th:onclick="'setStar(' + ${b.id} + ',4)'">★</button>
+                                            <button type="button" class="star-btn on" th:onclick="'setStar(' + ${b.id} + ',5)'">★</button>
+                                        </div>
+                                        <input type="text" name="comment" placeholder="Leave a comment…" class="fi"
+                                               style="font-size:0.73rem;padding:4px 8px;margin-bottom:4px;">
+                                        <button type="submit" class="btn btn-outline" style="font-size:0.73rem;padding:5px 10px;width:100%;">⭐ Review</button>
+                                    </form>
+                                </div>
+                                <div th:if="${feedbackGiven.get(b.id)}"
+                                     style="font-size:0.75rem;color:var(--dim);margin-top:6px;">✓ Reviewed</div>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function showPanel(name) {
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById('panel-' + name).classList.add('active');
+    document.getElementById('nav-' + name).classList.add('active');
+}
+function setStar(bookingId, val) {
+    document.getElementById('r-' + bookingId).value = val;
+    document.querySelectorAll('#stars-' + bookingId + ' .star-btn').forEach(function(s, i) {
+        s.classList.toggle('on', i < val);
+    });
+}
+window.addEventListener('DOMContentLoaded', function() {
+    var map = {'#loyalty':'loyalty','#vehicles':'vehicles','#bookings':'bookings','#book':'book','#profile':'profile'};
+    var p = map[window.location.hash];
+    if (p) showPanel(p);
+});
+</script>
+</body>
+</html>
