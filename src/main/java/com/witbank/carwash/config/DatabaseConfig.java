@@ -14,8 +14,8 @@ import java.net.URISyntaxException;
 
 /**
  * Custom DataSource configuration for Witbank Elite Car Wash.
- * Automatically parses Cloud/Render DATABASE_URL format (postgres://user:pass@host:port/db)
- * and transforms it into valid JDBC format (jdbc:postgresql://host:port/db) required by PostgreSQL JDBC driver.
+ * Dynamically resolves database URL and driver type for both local H2 development
+ * and cloud PostgreSQL deployments (Render, Heroku, etc.).
  */
 @Configuration
 public class DatabaseConfig {
@@ -31,51 +31,78 @@ public class DatabaseConfig {
     @Value("${spring.datasource.password:}")
     private String defaultPassword;
 
-    @Value("${spring.datasource.driver-class-name:org.h2.Driver}")
+    @Value("${spring.datasource.driver-class-name:#{null}}")
     private String defaultDriver;
 
     @Bean
     @Primary
     public DataSource dataSource() {
+        // 1. Check system environment variables for Render/Cloud database URLs
         String envDbUrl = System.getenv("DATABASE_URL");
-        if (envDbUrl != null && (envDbUrl.startsWith("postgres://") || envDbUrl.startsWith("postgresql://"))) {
-            try {
-                log.info("Detected Render/Cloud DATABASE_URL. Parsing connection parameters...");
-                URI uri = new URI(envDbUrl);
-                String host = uri.getHost();
-                int port = uri.getPort() == -1 ? 5432 : uri.getPort();
-                String path = uri.getPath(); // includes leading '/'
+        if (envDbUrl == null || envDbUrl.isBlank()) {
+            envDbUrl = System.getenv("SPRING_DATASOURCE_URL");
+        }
 
-                String jdbcUrl = "jdbc:postgresql://" + host + ":" + port + path;
+        if (envDbUrl != null && !envDbUrl.isBlank()) {
+            envDbUrl = envDbUrl.trim();
 
-                String username = defaultUsername;
-                String password = defaultPassword;
+            // If Render/Heroku format: postgres://user:pass@host:port/db or postgresql://user:pass@host:port/db
+            if (envDbUrl.startsWith("postgres://") || envDbUrl.startsWith("postgresql://")) {
+                try {
+                    log.info("Detected Cloud DATABASE_URL (postgres://). Parsing connection parameters...");
+                    URI uri = new URI(envDbUrl);
+                    String host = uri.getHost();
+                    int port = uri.getPort() == -1 ? 5432 : uri.getPort();
+                    String path = uri.getPath(); // includes leading '/'
 
-                if (uri.getUserInfo() != null && uri.getUserInfo().contains(":")) {
-                    String[] userInfo = uri.getUserInfo().split(":", 2);
-                    username = userInfo[0];
-                    password = userInfo[1];
+                    String jdbcUrl = "jdbc:postgresql://" + host + ":" + port + path;
+
+                    String username = defaultUsername;
+                    String password = defaultPassword;
+
+                    if (uri.getUserInfo() != null && uri.getUserInfo().contains(":")) {
+                        String[] userInfo = uri.getUserInfo().split(":", 2);
+                        username = userInfo[0];
+                        password = userInfo[1];
+                    }
+
+                    log.info("Successfully configured PostgreSQL DataSource for host: {}:{}", host, port);
+
+                    return DataSourceBuilder.create()
+                            .url(jdbcUrl)
+                            .username(username)
+                            .password(password)
+                            .driverClassName("org.postgresql.Driver")
+                            .build();
+                } catch (URISyntaxException e) {
+                    log.error("Failed to parse DATABASE_URL environment variable: {}", e.getMessage());
                 }
-
-                log.info("Successfully configured PostgreSQL DataSource for host: {}:{}", host, port);
-
+            } else if (envDbUrl.startsWith("jdbc:postgresql:")) {
+                log.info("Detected JDBC PostgreSQL URL ({})", envDbUrl);
                 return DataSourceBuilder.create()
-                        .url(jdbcUrl)
-                        .username(username)
-                        .password(password)
+                        .url(envDbUrl)
+                        .username(defaultUsername)
+                        .password(defaultPassword)
                         .driverClassName("org.postgresql.Driver")
                         .build();
-            } catch (URISyntaxException e) {
-                log.error("Failed to parse DATABASE_URL environment variable: {}", e.getMessage());
             }
         }
 
-        log.info("Using standard DataSource configuration (URL: {})", defaultUrl);
+        // 2. Fallback to application.properties defaults
+        // Automatically match driver to URL type to prevent driver mismatch
+        String driver = defaultDriver;
+        if (defaultUrl != null && defaultUrl.startsWith("jdbc:h2:")) {
+            driver = "org.h2.Driver";
+        } else if (defaultUrl != null && defaultUrl.startsWith("jdbc:postgresql:")) {
+            driver = "org.postgresql.Driver";
+        }
+
+        log.info("Using fallback DataSource configuration (URL: {}, Driver: {})", defaultUrl, driver);
         return DataSourceBuilder.create()
                 .url(defaultUrl)
                 .username(defaultUsername)
                 .password(defaultPassword)
-                .driverClassName(defaultDriver)
+                .driverClassName(driver != null ? driver : "org.h2.Driver")
                 .build();
     }
 }
