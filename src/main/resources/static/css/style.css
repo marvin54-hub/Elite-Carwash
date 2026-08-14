@@ -238,10 +238,10 @@ body {
     background-size: 1em;
 }
 
-.booking-form select option {
-    background-color: #1a1f26; /* Dark background for the dropdown list */
-    color: white;
-    padding: 10px;
+select option, .booking-form select option {
+    background-color: #0f172a !important;
+    color: #ffffff !important;
+    padding: 10px !important;
 }
 
 .booking-form input:focus, .booking-form select:focus {

@@ -36,6 +36,7 @@ public class BookingController {
     private void commonModel(Model model, HttpSession session) {
         Customer c = loggedIn(session);
         model.addAttribute("services",         bookingService.getServices());
+        model.addAttribute("addOns",           bookingService.getActiveAddOns());
         model.addAttribute("publicReviews",    customerService.getAllFeedback().stream().limit(6).toList());
         model.addAttribute("avgRating",        customerService.getAverageRating());
         model.addAttribute("yocoConfigured",   yocoService.isConfigured());
@@ -65,6 +66,7 @@ public class BookingController {
             @RequestParam String time,
             @RequestParam(required = false, defaultValue = "") String vehicleReg,
             @RequestParam(required = false, defaultValue = "") String vehicleId,
+            @RequestParam(required = false) List<Long> selectedAddOns,
             Model model, HttpSession session) {
 
         commonModel(model, session);
@@ -108,14 +110,34 @@ public class BookingController {
         } catch (NumberFormatException ignored) {}
         finalVidId = parsedVidId;
 
-        // ── Pricing ───────────────────────────────────────────────────────────
+        // ── Pricing & Add-Ons ──────────────────────────────────────────────────
         double basePrice = bookingService.getServices().stream()
                 .filter(s -> s.getName().equals(service))
                 .findFirst()
                 .map(s -> s.getPrice())
                 .orElse(0.0);
-        final double price    = bookingService.applyLoyaltyDiscount(email, basePrice);
-        final boolean discount = price < basePrice;
+
+        double addOnTotal = 0.0;
+        List<String> addOnList = new java.util.ArrayList<>();
+        if (selectedAddOns != null && !selectedAddOns.isEmpty()) {
+            var activeAddOns = bookingService.getActiveAddOns();
+            for (Long addOnId : selectedAddOns) {
+                activeAddOns.stream()
+                        .filter(a -> a.getId().equals(addOnId))
+                        .findFirst()
+                        .ifPresent(a -> {
+                            addOnList.add(a.getName() + " (R" + (int)a.getPrice() + ")");
+                        });
+            }
+            addOnTotal = activeAddOns.stream()
+                    .filter(a -> selectedAddOns.contains(a.getId()))
+                    .mapToDouble(a -> a.getPrice())
+                    .sum();
+        }
+        String addOnString = String.join(", ", addOnList);
+        double totalBeforeDiscount = basePrice + addOnTotal;
+        final double price    = bookingService.applyLoyaltyDiscount(email, totalBeforeDiscount);
+        final boolean discount = price < totalBeforeDiscount;
 
         // ── Vehicle label for confirmation display ────────────────────────────
         String label = "";
@@ -133,7 +155,7 @@ public class BookingController {
         // ── Save booking ──────────────────────────────────────────────────────
         var booking = bookingService.addBooking(
                 name.trim(), cellphone.trim(), email.trim(),
-                service, time, price, custId, finalVidId, vehicleReg);
+                service, time, price, custId, finalVidId, vehicleReg, addOnString);
 
         // ── Confirmation model ────────────────────────────────────────────────
         commonModel(model, session);

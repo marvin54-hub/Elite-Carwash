@@ -58,7 +58,7 @@
     <p class="verify-sub">🔎 Booking Verification — scan the QR or type the reference</p>
 
     <form action="/admin/verify" method="GET" class="verify-field">
-            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+            <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
         <input type="text" name="code" placeholder="e.g. WE-12" autofocus>
         <button type="submit" class="verify-btn">Verify Booking →</button>
     </form>
@@ -75,8 +75,8 @@
             <span class="verified-badge">✓ Already Verified</span>
         </div>
         <form th:unless="${found.verified}" action="/admin/verify/confirm" method="POST">
-            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
-            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+            <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+            <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
             <input type="hidden" name="id" th:value="${found.id}">
             <button type="submit" class="confirm-btn">✅ Confirm Arrival</button>
         </form>

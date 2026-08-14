@@ -97,7 +97,19 @@ public class Booking {
     public boolean       isReminderSent()      { return reminderSent; }
     public void          setReminderSent(boolean v) { this.reminderSent = v; }
 
+    @Column(length = 1000)
+    private String selectedAddOns;
+
+    @Column(length = 1000)
+    private String serviceNotes;
+
+    public String getSelectedAddOns() { return selectedAddOns; }
+    public void setSelectedAddOns(String v) { this.selectedAddOns = v; }
+
     /** Convenience: true when paymentStatus is "Paid" (any variant). */
+    public String getServiceNotes() { return serviceNotes; }
+    public void setServiceNotes(String v) { this.serviceNotes = v; }
+
     public boolean isPaid() {
         return paymentStatus != null && paymentStatus.toLowerCase().contains("paid");
     }

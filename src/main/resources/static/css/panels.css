@@ -358,8 +358,13 @@
 
 /* ── Status selects ──────────────────────────────────────────── */
 .status-sel {
-  border: none; outline: none; cursor: pointer; border-radius: 20px;
+  border: 1px solid var(--p-border); outline: none; cursor: pointer; border-radius: 20px;
   padding: 4px 10px; font-size: 0.75rem; font-family: 'Outfit', sans-serif; font-weight: 600;
+}
+.status-sel option, select option {
+  background-color: #0f172a !important;
+  color: #ffffff !important;
+  padding: 8px 12px;
 }
 .ss-pending    { background: rgba(245,158,11,0.15); color: var(--p-warn); }
 .ss-inprog     { background: rgba(26,108,255,0.15);  color: var(--p-blue); }

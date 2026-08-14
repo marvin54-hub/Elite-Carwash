@@ -7,6 +7,13 @@
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/css/style.css">
 <link rel="stylesheet" href="/css/panels.css">
+<style>
+  select option, .status-sel option {
+    background-color: #0f172a !important;
+    color: #ffffff !important;
+    padding: 8px 12px;
+  }
+</style>
 </head>
 <body class="panel-body">
 
@@ -62,6 +69,9 @@
   <button class="p-nav-item" id="nav-services" onclick="showTab('services-section',this)">
     <span class="icon">🔧</span> Services
   </button>
+  <button class="p-nav-item" id="nav-addons" onclick="showTab('addons-section',this)">
+    <span class="icon">✨</span> Add-Ons
+  </button>
   <button class="p-nav-item" id="nav-schedule" onclick="showTab('schedule-section',this)">
     <span class="icon">📅</span> Schedule
   </button>
@@ -73,6 +83,10 @@
   </button>
   <button class="p-nav-item" id="nav-feedback" onclick="showTab('feedback-section',this)">
     <span class="icon">⭐</span> Reviews
+  </button>
+  <button class="p-nav-item" id="nav-tickets" onclick="showTab('tickets-section',this)">
+    <span class="icon">💬</span> Support Tickets
+    <span class="p-nav-badge" th:if="${tickets != null}" th:text="${#lists.size(tickets)}">0</span>
   </button>
   <button class="p-nav-item" id="nav-notifications" onclick="showTab('notifications-section',this)">
     <span class="icon">📢</span> Notifications
@@ -95,7 +109,7 @@
 <a href="/admin/export" class="p-nav-item">
     <span class="icon">📄</span> Export Report
   </a>
-  <a href="/h2-console" target="_blank" class="p-nav-item">
+  <a href="/admin/sql" class="p-nav-item">
     <span class="icon">🗄️</span> SQL Console
   </a>
 
@@ -262,14 +276,18 @@
             <td th:text="${'R' + #numbers.formatDecimal(b.price,1,2)}">-</td>
             <td>
               <form action="/admin/bookings/update-status" method="POST" style="margin:0;">
-            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+            <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
                 <input type="hidden" name="id" th:value="${b.id}">
                 <select name="status" onchange="this.form.submit()" class="status-sel"
-                        th:classappend="${b.status == 'Completed' ? 'ss-completed' : b.status == 'Cancelled' ? 'ss-cancelled' : b.status == 'In Progress' ? 'ss-inprog' : 'ss-pending'}">
-                  <option value="Pending"     th:selected="${b.status == 'Pending'}">Pending</option>
-                  <option value="In Progress" th:selected="${b.status == 'In Progress'}">In Progress</option>
-                  <option value="Completed"   th:selected="${b.status == 'Completed'}">Completed</option>
-                  <option value="Cancelled"   th:selected="${b.status == 'Cancelled'}">Cancelled</option>
+                        th:classappend="${b.status == 'Completed' or b.status == 'Vehicle Collected' ? 'ss-completed' : b.status == 'Cancelled' ? 'ss-cancelled' : (b.status == 'In Progress' or b.status == 'Washing' or b.status == 'Confirmed' or b.status == 'Vehicle Received' or b.status == 'Quality Check') ? 'ss-inprog' : 'ss-pending'}">
+                  <option value="Pending"          th:selected="${b.status == 'Pending'}">Pending</option>
+                  <option value="Confirmed"        th:selected="${b.status == 'Confirmed'}">Confirmed</option>
+                  <option value="Vehicle Received" th:selected="${b.status == 'Vehicle Received'}">Vehicle Received</option>
+                  <option value="Washing"          th:selected="${b.status == 'Washing' or b.status == 'In Progress'}">Washing</option>
+                  <option value="Quality Check"    th:selected="${b.status == 'Quality Check'}">Quality Check</option>
+                  <option value="Completed"        th:selected="${b.status == 'Completed'}">Completed</option>
+                  <option value="Vehicle Collected" th:selected="${b.status == 'Vehicle Collected'}">Vehicle Collected</option>
+                  <option value="Cancelled"        th:selected="${b.status == 'Cancelled'}">Cancelled</option>
                 </select>
               </form>
             </td>
@@ -279,7 +297,7 @@
             </td>
             <td>
               <form th:if="${b.cellphone != null and !b.cellphone.isEmpty()}" action="/admin/notifications/dispatch" method="POST" style="margin:0 0 3px;">
-            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+            <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
                 <input type="hidden" name="recipient" th:value="${b.cellphone}">
                 <input type="hidden" name="type" value="SMS">
                 <input type="hidden" name="messageContent" th:value="${'Witbank Elite: Hi ' + b.customerName + ', your ' + b.serviceType + ' status is now ' + b.status + '.'}">
@@ -290,7 +308,7 @@
                     th:data-ref="${'#WE-' + b.id}" th:data-time="${#temporals.format(b.bookingTime,'dd MMM yyyy, HH:mm')}"
                     th:data-amount="${'R' + #numbers.formatDecimal(b.price,1,2)}"
                     onsubmit="triggerEmailJs(event,this)">
-            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+            <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
                 <input type="hidden" name="recipient" th:value="${b.email}">
                 <input type="hidden" name="type" value="EMAIL">
                 <input type="hidden" name="messageContent" th:value="${'Hello ' + b.customerName + ', your ' + b.serviceType + ' status is now ' + b.status + '.'}">
@@ -300,7 +318,7 @@
             <td style="display:flex;gap:6px;align-items:center;">
               <a th:href="@{/booking/slip/{id}(id=${b.id})}" target="_blank" class="p-btn p-btn-outline p-btn-icon" title="Print Slip">🖨️</a>
               <form action="/admin/bookings/delete" method="POST" style="margin:0;" onsubmit="return confirm('Delete this booking?')">
-            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+            <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
                 <input type="hidden" name="id" th:value="${b.id}">
                 <button type="submit" class="p-btn p-btn-danger p-btn-icon">🗑️</button>
               </form>
@@ -327,7 +345,7 @@
       <div class="p-card-header"><h3 class="p-card-title">Add New Item</h3></div>
       <div class="p-card-body">
         <form action="/admin/inventory/add" method="POST">
-            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+            <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
           <div class="p-form-grid" style="align-items:end;">
             <div class="p-field"><label>Item Name</label><input type="text" name="itemName" placeholder="e.g. Tire Shine" required></div>
             <div class="p-field"><label>Current Stock</label><input type="number" name="quantity" value="0" min="0" required></div>
@@ -345,7 +363,7 @@
           <tbody>
           <tr th:each="item : ${inventory}">
             <form th:id="${'invf-' + item.id}" action="/admin/inventory/update" method="POST" style="display:none;">
-            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+            <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
               <input type="hidden" name="id" th:value="${item.id}">
             </form>
             <td style="font-weight:600;" th:text="${item.name}">-</td>
@@ -358,7 +376,7 @@
             <td><button type="submit" th:form="${'invf-' + item.id}" class="p-btn p-btn-success p-btn-sm">💾 Save</button></td>
             <td>
               <form action="/admin/inventory/delete" method="POST" style="display:inline;" onsubmit="return confirm('Remove this item?')">
-            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+            <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
                 <input type="hidden" name="id" th:value="${item.id}">
                 <button type="submit" class="p-btn p-btn-danger p-btn-icon">🗑️</button>
               </form>
@@ -386,7 +404,7 @@
       <div class="p-card-header"><h3 class="p-card-title">➕ Add New Service Package</h3></div>
       <div class="p-card-body">
         <form action="/admin/services/add" method="POST">
-          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+          <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
           <div class="p-form-grid" style="align-items:end;">
             <div class="p-field" style="max-width:80px;"><label>Icon</label>
               <input type="text" name="icon" value="🚗" style="text-align:center;font-size:1.3rem;" required></div>
@@ -412,7 +430,7 @@
           <span class="p-badge p-badge-blue" th:text="${'R' + #numbers.formatDecimal(svc.price,1,2)}">R0</span>
           <form action="/admin/services/delete" method="POST" style="margin:0;"
                 onsubmit="return confirm('Delete this service package?')">
-            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+            <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
             <input type="hidden" name="id" th:value="${svc.id}">
             <button type="submit" style="background:rgba(255,77,77,0.15);border:1px solid rgba(255,77,77,0.3);
                     color:#ff8080;border-radius:8px;padding:5px 12px;cursor:pointer;font-size:0.78rem;">🗑 Delete</button>
@@ -421,7 +439,7 @@
       </div>
       <div class="p-card-body">
         <form th:action="@{/admin/services/update}" method="POST">
-          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+          <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
           <input type="hidden" name="id" th:value="${svc.id}">
           <div class="p-form-grid" style="align-items:end;">
             <div class="p-field" style="max-width:70px;"><label>Icon</label>
@@ -435,6 +453,107 @@
             <div><button type="submit" class="p-btn p-btn-primary" style="width:100%;">💾 Save Changes</button></div>
           </div>
         </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <!--  ADD-ONS MANAGEMENT                                        -->
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <div id="addons-section" class="tab-section" style="display:none;">
+    <div class="p-page-header">
+      <div>
+        <h1 class="p-page-title">Add-On Services</h1>
+        <p class="p-page-sub">Manage optional add-on services, pricing, and availability.</p>
+      </div>
+    </div>
+
+    <!-- Create Add-On Form -->
+    <div class="p-card" style="margin-bottom:20px;">
+      <div class="p-card-header"><h3 class="p-card-title">➕ Add New Add-On Service</h3></div>
+      <div class="p-card-body">
+        <form action="/admin/addons/add" method="POST">
+          <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+          <div class="p-form-grid">
+            <div class="p-field"><label>Add-On Name</label>
+              <input type="text" name="name" placeholder="e.g. Tyre Shine & Dressing" required></div>
+            <div class="p-field"><label>Price (R)</label>
+              <input type="number" name="price" placeholder="40.00" min="0" step="0.50" required></div>
+            <div class="p-field p-field-full"><label>Description</label>
+              <input type="text" name="description" placeholder="Brief description of the add-on treatment"></div>
+            <div><button type="submit" class="p-btn p-btn-primary" style="width:100%;margin-top:10px;">✨ Create Add-On</button></div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Add-Ons List -->
+    <div class="p-card">
+      <div class="p-card-header">
+        <div>
+          <h3 class="p-card-title">Configured Add-Ons</h3>
+          <p class="p-card-sub" style="font-size:0.8rem;color:var(--p-dim);margin-top:2px;">Active add-ons appear dynamically on the customer booking form with live pricing updates.</p>
+        </div>
+      </div>
+      <div class="p-table-wrap">
+        <table class="p-table">
+          <thead>
+            <tr>
+              <th>Add-On Service</th>
+              <th>Description</th>
+              <th>Price</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr th:each="ao : ${addOns}">
+              <td>
+                <strong style="font-size:0.92rem;color:#fff;" th:text="${ao.name}">-</strong>
+                <details style="margin-top:6px;">
+                  <summary style="font-size:0.75rem;color:var(--p-blue);cursor:pointer;font-weight:600;">✏️ Edit Details</summary>
+                  <form action="/admin/addons/update" method="POST" style="margin-top:8px;display:flex;flex-direction:column;gap:6px;max-width:320px;background:rgba(0,0,0,0.25);padding:10px;border-radius:8px;border:1px solid var(--p-border);">
+                    <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                    <input type="hidden" name="id" th:value="${ao.id}">
+                    <div style="font-size:0.72rem;color:var(--p-dim);">Add-On Name</div>
+                    <input type="text" name="name" th:value="${ao.name}" required style="padding:4px 8px;font-size:0.8rem;background:rgba(0,0,0,0.3);color:#fff;border:1px solid var(--p-border);border-radius:6px;">
+                    <div style="font-size:0.72rem;color:var(--p-dim);">Price (R)</div>
+                    <input type="number" name="price" th:value="${ao.price}" step="0.50" min="0" required style="padding:4px 8px;font-size:0.8rem;background:rgba(0,0,0,0.3);color:#fff;border:1px solid var(--p-border);border-radius:6px;">
+                    <div style="font-size:0.72rem;color:var(--p-dim);">Description</div>
+                    <input type="text" name="description" th:value="${ao.description}" style="padding:4px 8px;font-size:0.8rem;background:rgba(0,0,0,0.3);color:#fff;border:1px solid var(--p-border);border-radius:6px;">
+                    <button type="submit" class="p-btn p-btn-primary p-btn-sm" style="align-self:flex-start;margin-top:4px;">💾 Update</button>
+                  </form>
+                </details>
+              </td>
+              <td style="font-size:0.85rem;color:rgba(255,255,255,0.7);max-width:280px;" th:text="${ao.description ?: '—'}">—</td>
+              <td>
+                <span style="font-size:0.95rem;font-weight:700;color:var(--p-blue);" th:text="${'R' + #numbers.formatDecimal(ao.price,1,2)}">R0</span>
+              </td>
+              <td>
+                <span class="p-badge" th:classappend="${ao.active ? 'p-badge-green' : 'p-badge-red'}"
+                      th:text="${ao.active ? 'Active' : 'Disabled'}">Active</span>
+              </td>
+              <td>
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                  <form action="/admin/addons/toggle" method="POST" style="margin:0;">
+                    <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                    <input type="hidden" name="id" th:value="${ao.id}">
+                    <button type="submit" class="p-btn p-btn-sm" th:classappend="${ao.active ? 'p-btn-outline' : 'p-btn-primary'}"
+                            th:text="${ao.active ? 'Disable' : 'Enable'}">Toggle</button>
+                  </form>
+                  <form action="/admin/addons/delete" method="POST" style="margin:0;" onsubmit="return confirm('Delete this add-on?')">
+                    <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                    <input type="hidden" name="id" th:value="${ao.id}">
+                    <button type="submit" class="p-btn p-btn-danger p-btn-sm">🗑️ Delete</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(addOns)}">
+              <td colspan="5" style="text-align:center;padding:40px;color:var(--p-dim);">No add-on services configured yet.</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
   </div>
@@ -487,7 +606,7 @@
             </td>
             <td>
               <form action="/admin/staff/change-password" method="POST" style="display:flex;gap:6px;">
-            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+            <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
                 <input type="hidden" name="id" th:value="${s.id}">
                 <input type="password" name="newPassword" placeholder="New password" minlength="6" required class="p-field input" style="padding:6px 10px;background:var(--p-card);border:1px solid var(--p-border);border-radius:7px;color:white;font-family:'Outfit',sans-serif;width:140px;">
                 <button type="submit" class="p-btn p-btn-outline p-btn-sm">🔑</button>
@@ -495,7 +614,7 @@
             </td>
             <td>
               <form action="/admin/staff/delete" method="POST" onsubmit="return confirm('Remove this staff account?')">
-            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+            <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
                 <input type="hidden" name="id" th:value="${s.id}">
                 <button type="submit" class="p-btn p-btn-danger p-btn-sm">🗑️</button>
               </form>
@@ -510,7 +629,7 @@
       <div class="p-card-header"><h3 class="p-card-title">Add New Staff Member</h3></div>
       <div class="p-card-body">
         <form action="/admin/staff/add" method="POST">
-            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+            <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
           <div class="p-form-grid" style="align-items:end;">
             <div class="p-field"><label>Full Name</label><input type="text" name="fullName" placeholder="e.g. Thabo Nkosi" required></div>
             <div class="p-field"><label>Username</label><input type="text" name="username" placeholder="e.g. thabo1" required></div>
@@ -556,7 +675,7 @@
             </td>
             <td>
               <form action="/admin/customers/delete" method="POST" onsubmit="return confirm('Delete this customer?')">
-            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+            <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
                 <input type="hidden" name="id" th:value="${cust.id}">
                 <button type="submit" class="p-btn p-btn-danger p-btn-sm">🗑️</button>
               </form>
@@ -574,7 +693,7 @@
       <div class="p-modal-box">
         <h3 class="p-modal-title">Edit Customer</h3>
         <form action="/admin/customers/edit" method="POST">
-            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+            <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
           <input type="hidden" name="id" id="editCustId">
           <div class="p-field" style="margin-bottom:14px;"><label>Full Name</label><input type="text" name="fullName" id="editCustName" required></div>
           <div class="p-field" style="margin-bottom:20px;"><label>Cellphone</label><input type="tel" name="cellphone" id="editCustPhone" required></div>
@@ -583,6 +702,55 @@
             <button type="button" class="p-btn p-btn-outline" style="flex:1;" onclick="closeEditCustomer()">Cancel</button>
           </div>
         </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <!--  SUPPORT TICKETS                                           -->
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <div id="tickets-section" class="tab-section" style="display:none;">
+    <div class="p-page-header">
+      <div><h1 class="p-page-title">Customer Support Tickets</h1>
+        <p class="p-page-sub">Review customer inquiries and send manager responses</p>
+      </div>
+    </div>
+    <div class="p-card">
+      <div class="p-card-body">
+        <div th:if="${#lists.isEmpty(tickets)}" class="empty">No support tickets submitted yet.</div>
+        <div th:unless="${#lists.isEmpty(tickets)}" class="table-responsive">
+          <table class="p-table">
+            <thead>
+              <tr><th>Ref</th><th>Customer</th><th>Subject &amp; Message</th><th>Submitted</th><th>Status</th><th>Action / Manager Response</th></tr>
+            </thead>
+            <tbody>
+              <tr th:each="t : ${tickets}">
+                <td style="font-size:0.8rem;color:var(--p-dim);" th:text="'#TKT-'+${t.id}">-</td>
+                <td>
+                  <strong th:text="${t.customerName}">Name</strong>
+                  <div style="font-size:0.75rem;color:var(--p-dim);" th:text="${t.email}">email</div>
+                  <div style="font-size:0.75rem;color:var(--p-dim);" th:text="${t.cellphone}">phone</div>
+                </td>
+                <td style="max-width:300px;">
+                  <strong th:text="${t.subject}">Subject</strong>
+                  <p style="font-size:0.82rem;color:rgba(255,255,255,0.8);margin-top:4px;" th:text="${t.message}">Message</p>
+                </td>
+                <td style="font-size:0.8rem;color:var(--p-dim);" th:text="${#temporals.format(t.submittedAt,'dd MMM HH:mm')}">Time</td>
+                <td>
+                  <span class="badge" th:classappend="${t.status == 'Answered' ? 'b-complete' : 'b-pending'}" th:text="${t.status}">Open</span>
+                </td>
+                <td>
+                  <form action="/admin/tickets/respond" method="POST" style="display:flex;flex-direction:column;gap:6px;">
+                    <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                    <input type="hidden" name="ticketId" th:value="${t.id}">
+                    <textarea name="response" rows="2" placeholder="Write reply to customer…" class="fi" style="font-size:0.8rem;padding:4px 8px;background:rgba(0,0,0,0.3);color:#fff;border:1px solid var(--p-border);border-radius:6px;" th:text="${t.adminResponse}" required></textarea>
+                    <button type="submit" class="p-btn p-btn-cyan p-btn-sm" style="align-self:flex-start;">📩 Send Reply</button>
+                  </form>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
@@ -607,7 +775,7 @@
             <p th:if="${fb.comment != null and !fb.comment.isEmpty()}" style="font-size:0.85rem;margin-top:6px;" th:text="${fb.comment}">-</p>
           </div>
           <form action="/admin/feedback/delete" method="POST" onsubmit="return confirm('Remove this review?')">
-            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+            <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
             <input type="hidden" name="id" th:value="${fb.id}">
             <button type="submit" class="p-btn p-btn-danger p-btn-sm">🗑️</button>
           </form>
@@ -626,7 +794,7 @@
       <div class="p-card-header"><h3 class="p-card-title">Add Shift</h3></div>
       <div class="p-card-body">
         <form action="/admin/schedule/add" method="POST">
-            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+            <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
           <div class="p-form-grid" style="align-items:end;">
             <div class="p-field"><label>Staff Member</label>
               <select name="staffId" required>
@@ -656,7 +824,7 @@
             <td style="color:var(--p-dim);font-size:0.82rem;" th:text="${shift.notes ?: '—'}">-</td>
             <td>
               <form action="/admin/schedule/delete" method="POST" onsubmit="return confirm('Remove this shift?')">
-            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+            <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
                 <input type="hidden" name="id" th:value="${shift.id}">
                 <button type="submit" class="p-btn p-btn-danger p-btn-sm">🗑️</button>
               </form>
@@ -681,7 +849,7 @@
       <div class="p-card-header"><h3 class="p-card-title">Send Manual Notification</h3></div>
       <div class="p-card-body">
         <form action="/admin/notifications/dispatch" method="POST" onsubmit="triggerEmailJsBroadcast(event,this)">
-            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+            <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
           <div class="p-form-grid" style="align-items:end;">
             <div class="p-field"><label>Customer / Contact</label>
               <select name="recipient" required>

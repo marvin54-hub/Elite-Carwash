@@ -50,6 +50,8 @@ public class CustomerController {
         model.addAttribute("feedbackGiven",   feedbackGiven);
         model.addAttribute("vehicleLabels",   customerService.getVehicleLabelsByBookings(bookings));
         model.addAttribute("services",        bookingService.getServices());
+        model.addAttribute("inspectionsMap",  bookingService.getInspectionsMap());
+        model.addAttribute("tickets",         customerService.getTicketsForCustomer(c.getId()));
         model.addAttribute("yocoConfigured",  yocoService.isConfigured());
         if (passwordError   != null && !passwordError.isEmpty())
             model.addAttribute("passwordError", passwordError);
@@ -100,12 +102,48 @@ public class CustomerController {
         return "redirect:/customer/dashboard#vehicles";
     }
 
+    @PostMapping("/vehicles/edit")
+    public String editVehicle(@RequestParam Long id,
+                              @RequestParam String make,
+                              @RequestParam String model_,
+                              @RequestParam String regPlate,
+                              @RequestParam(defaultValue = "") String color,
+                              HttpSession session) {
+        Customer c = req(session);
+        if (c == null) return "redirect:/customer/login";
+        customerService.getVehicles(c.getId()).stream()
+                .filter(v -> v.getId().equals(id))
+                .findFirst()
+                .ifPresent(v -> {
+                    v.setMake(make.trim());
+                    v.setModel(model_.trim());
+                    v.setRegPlate(regPlate.trim().toUpperCase());
+                    v.setColor(color.trim());
+                    customerService.saveVehicle(v);
+                });
+        return "redirect:/customer/dashboard#vehicles";
+    }
+
     @PostMapping("/vehicles/delete")
     public String deleteVehicle(@RequestParam Long id, HttpSession session) {
         Customer c = req(session);
         if (c == null) return "redirect:/customer/login";
         customerService.deleteVehicle(c.getId(), id);
         return "redirect:/customer/dashboard#vehicles";
+    }
+
+    // ── Support Tickets ───────────────────────────────────────────────────────
+    @PostMapping("/support/submit")
+    public String submitTicket(@RequestParam String subject,
+                               @RequestParam String message,
+                               HttpSession session, RedirectAttributes ra) {
+        Customer c = req(session);
+        if (c == null) return "redirect:/customer/login";
+        if (!subject.isBlank() && !message.isBlank()) {
+            customerService.submitTicket(c.getId(), c.getFullName(), c.getCellphone(), c.getEmail(), subject, message);
+            ra.addFlashAttribute("ticketMsg", "Your support enquiry has been submitted. Our team will respond shortly!");
+        }
+        return "redirect:/customer/dashboard#support";
     }
 
     // ── Bookings — Edit & Delete ───────────────────────────────────────────────

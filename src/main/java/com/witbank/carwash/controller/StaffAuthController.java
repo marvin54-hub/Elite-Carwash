@@ -19,8 +19,7 @@ public class StaffAuthController {
                             @RequestParam(required = false) String logout,
                             @RequestParam(required = false) String disabled,
                             HttpSession session, Model model) {
-        if (session.getAttribute("staffUser") != null) {
-            var s = (com.witbank.carwash.model.Staff) session.getAttribute("staffUser");
+        if (session.getAttribute("staffUser") instanceof com.witbank.carwash.model.Staff s) {
             return "ADMIN".equalsIgnoreCase(s.getRole())
                     ? "redirect:/admin/dashboard" : "redirect:/staff/dashboard";
         }

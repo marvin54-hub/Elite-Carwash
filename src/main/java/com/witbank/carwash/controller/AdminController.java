@@ -58,9 +58,12 @@ public class AdminController {
         long lowStockCount = bookingService.getInventory().stream().filter(com.witbank.carwash.model.InventoryItem::isLowStock).count();
         model.addAttribute("lowStockCount",          lowStockCount);
         model.addAttribute("services",              bookingService.getServices());
+        model.addAttribute("addOns",                bookingService.getAllAddOns());
+        model.addAttribute("inspectionsMap",        bookingService.getInspectionsMap());
         model.addAttribute("customerStats",         bookingService.getCustomerVisitCount());
         model.addAttribute("notifications",         notificationService.getAllDispatchedLogs());
         model.addAttribute("feedbackList",          customerService.getAllFeedback());
+        model.addAttribute("tickets",               customerService.getAllTickets());
         model.addAttribute("avgRating",             customerService.getAverageRating());
         model.addAttribute("weekSchedule",          bookingService.getScheduleForWeek(LocalDate.now()));
 
@@ -248,6 +251,62 @@ public class AdminController {
         if (notAdmin(session))    return redirect("?denied");
         bookingService.deleteService(id);
         return redirect("#services-section");
+    }
+
+    // ── Add-Ons ───────────────────────────────────────────────────────────────
+    @PostMapping("/addons/add")
+    public String addAddOn(@RequestParam String name, @RequestParam double price,
+                           @RequestParam(required = false, defaultValue = "") String description,
+                           HttpSession session) {
+        if (notLoggedIn(session)) return "redirect:/staff/login";
+        if (notAdmin(session))    return redirect("?denied");
+        bookingService.saveAddOn(new com.witbank.carwash.model.AddOn(name.trim(), price, description.trim()));
+        return redirect("#addons-section");
+    }
+
+    @PostMapping("/addons/update")
+    public String updateAddOn(@RequestParam Long id, @RequestParam String name,
+                              @RequestParam double price,
+                              @RequestParam(required = false, defaultValue = "") String description,
+                              HttpSession session) {
+        if (notLoggedIn(session)) return "redirect:/staff/login";
+        if (notAdmin(session))    return redirect("?denied");
+        var existing = bookingService.getAllAddOns().stream().filter(a -> a.getId().equals(id)).findFirst();
+        if (existing.isPresent()) {
+            var item = existing.get();
+            item.setName(name.trim());
+            item.setPrice(price);
+            item.setDescription(description.trim());
+            bookingService.saveAddOn(item);
+        }
+        return redirect("#addons-section");
+    }
+
+    @PostMapping("/addons/toggle")
+    public String toggleAddOn(@RequestParam Long id, HttpSession session) {
+        if (notLoggedIn(session)) return "redirect:/staff/login";
+        if (notAdmin(session))    return redirect("?denied");
+        bookingService.toggleAddOnStatus(id);
+        return redirect("#addons-section");
+    }
+
+    @PostMapping("/addons/delete")
+    public String deleteAddOn(@RequestParam Long id, HttpSession session) {
+        if (notLoggedIn(session)) return "redirect:/staff/login";
+        if (notAdmin(session))    return redirect("?denied");
+        bookingService.deleteAddOn(id);
+        return redirect("#addons-section");
+    }
+
+    // ── Support Tickets ───────────────────────────────────────────────────────
+    @PostMapping("/tickets/respond")
+    public String respondTicket(@RequestParam Long ticketId,
+                                @RequestParam String response,
+                                HttpSession session) {
+        if (notLoggedIn(session)) return "redirect:/staff/login";
+        if (notAdmin(session))    return redirect("?denied");
+        customerService.respondToTicket(ticketId, response);
+        return redirect("#tickets-section");
     }
 
     // ── Inventory ─────────────────────────────────────────────────────────────

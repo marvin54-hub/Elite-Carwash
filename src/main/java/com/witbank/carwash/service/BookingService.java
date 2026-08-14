@@ -27,6 +27,8 @@ public class BookingService {
     @Autowired private StaffScheduleRepository  scheduleRepository;
     @Autowired private NotificationService      notificationService;
     @Autowired private PasswordEncoder          passwordEncoder;
+    @Autowired private com.witbank.carwash.repository.AddOnRepository addOnRepository;
+    @Autowired private com.witbank.carwash.repository.VehicleInspectionRepository inspectionRepository;
 
     @Value("${carwash.bays:2}")
     private int bays;
@@ -49,6 +51,13 @@ public class BookingService {
             inventoryItemRepository.save(new InventoryItem("Microfiber Cloths",100, 20));
             inventoryItemRepository.save(new InventoryItem("Tire Shine",          5,  8));
         }
+        if (addOnRepository.count() == 0) {
+            addOnRepository.save(new com.witbank.carwash.model.AddOn("Tyre Shine & Dressing", 40.0, "High-gloss tire dressing for long-lasting dark shine."));
+            addOnRepository.save(new com.witbank.carwash.model.AddOn("Engine Bay Wash", 150.0, "Degrease, high-pressure rinse & protective shine for engine."));
+            addOnRepository.save(new com.witbank.carwash.model.AddOn("Leather Conditioning", 120.0, "Deep clean and nourish leather upholstery."));
+            addOnRepository.save(new com.witbank.carwash.model.AddOn("Air Freshener & Deodorizer", 25.0, "Long-lasting fresh car scent treatment."));
+            addOnRepository.save(new com.witbank.carwash.model.AddOn("Headlight Restoration", 180.0, "Restore cloudy or oxidized headlight lenses."));
+        }
     }
 
     // ── Real-time slot availability ───────────────────────────────────────────
@@ -64,6 +73,13 @@ public class BookingService {
     public Booking addBooking(String name, String cellphone, String email,
                               String serviceName, String time, double price,
                               Long customerId, Long vehicleId, String vehicleReg) {
+        return addBooking(name, cellphone, email, serviceName, time, price, customerId, vehicleId, vehicleReg, null);
+    }
+
+    public Booking addBooking(String name, String cellphone, String email,
+                              String serviceName, String time, double price,
+                              Long customerId, Long vehicleId, String vehicleReg,
+                              String selectedAddOns) {
 
         Booking b = new Booking(null, name, cellphone, email,
                 serviceName, LocalDateTime.parse(time), price);
@@ -71,6 +87,8 @@ public class BookingService {
         b.setVehicleId(vehicleId);
         if (vehicleReg != null && !vehicleReg.isBlank())
             b.setVehicleReg(vehicleReg.trim().toUpperCase());
+        if (selectedAddOns != null && !selectedAddOns.isBlank())
+            b.setSelectedAddOns(selectedAddOns.trim());
         b = bookingRepository.save(b);
 
         // Deduct one Car Shampoo unit per wash
@@ -102,10 +120,17 @@ public class BookingService {
     }
 
     public void updateBookingStatus(Long id, String status) {
+        updateBookingStatusAndNotes(id, status, null);
+    }
+
+    public void updateBookingStatusAndNotes(Long id, String status, String serviceNotes) {
         bookingRepository.findById(id).ifPresent(b -> {
             boolean justCompleted = "Completed".equalsIgnoreCase(status)
                     && !"Completed".equalsIgnoreCase(b.getStatus());
             b.setStatus(status);
+            if (serviceNotes != null) {
+                b.setServiceNotes(serviceNotes);
+            }
             bookingRepository.save(b);
 
             if (justCompleted) {
@@ -253,5 +278,45 @@ public class BookingService {
 
     public double applyLoyaltyDiscount(String email, double price) {
         return isVipCustomer(email) ? Math.round(price * 0.90 * 100.0) / 100.0 : price;
+    }
+
+    // ── Add-Ons Management ───────────────────────────────────────────────────
+    public List<com.witbank.carwash.model.AddOn> getAllAddOns() { return addOnRepository.findAll(); }
+    public List<com.witbank.carwash.model.AddOn> getActiveAddOns() { return addOnRepository.findByActiveTrue(); }
+    public void saveAddOn(com.witbank.carwash.model.AddOn item) { addOnRepository.save(item); }
+    public void toggleAddOnStatus(Long id) {
+        addOnRepository.findById(id).ifPresent(item -> {
+            item.setActive(!item.isActive());
+            addOnRepository.save(item);
+        });
+    }
+    public void deleteAddOn(Long id) { addOnRepository.deleteById(id); }
+
+    // ── Vehicle Inspection Management ─────────────────────────────────────────
+    public java.util.Optional<com.witbank.carwash.model.VehicleInspection> getInspectionForBooking(Long bookingId) {
+        return inspectionRepository.findByBookingId(bookingId);
+    }
+
+    public void saveInspection(Long bookingId, String vehicleReg, String rating,
+                               String damageNotes, String photoUrls, String staffName) {
+        var existing = inspectionRepository.findByBookingId(bookingId).orElseGet(() -> {
+            var ins = new com.witbank.carwash.model.VehicleInspection();
+            ins.setBookingId(bookingId);
+            return ins;
+        });
+        existing.setVehicleReg(vehicleReg);
+        existing.setConditionRating(rating);
+        existing.setExistingDamageNotes(damageNotes);
+        existing.setPhotoUrls(photoUrls);
+        existing.setInspectedByStaff(staffName);
+        existing.setInspectedAt(java.time.LocalDateTime.now());
+        inspectionRepository.save(existing);
+    }
+
+    public java.util.Map<Long, com.witbank.carwash.model.VehicleInspection> getInspectionsMap() {
+        return inspectionRepository.findAll().stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        com.witbank.carwash.model.VehicleInspection::getBookingId,
+                        ins -> ins, (a, b) -> b));
     }
 }

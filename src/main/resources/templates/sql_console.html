@@ -71,13 +71,13 @@
         <div class="sidebar">
             <h3>Tables</h3>
             <button class="tbl-btn" th:each="t : ${tables}"
-                    th:text="${t}" th:onclick="'fillQuery(\'SELECT * FROM ' + ${t} + ' LIMIT 20\')'" >TABLE</button>
+                    th:text="${t}" th:data-table="${t}" onclick="fillQuery('SELECT * FROM ' + this.getAttribute('data-table') + ' LIMIT 20')" >TABLE</button>
         </div>
         <!-- Query area -->
         <div class="main">
             <div class="query-box">
                 <form action="/admin/sql" method="POST" id="sqlForm">
-                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                    <input type="hidden" th:name="${_csrf != null ? _csrf.parameterName : '_csrf'}" th:value="${_csrf != null ? _csrf.token : ''}"/>
                     <textarea name="sql" id="sqlInput" placeholder="SELECT * FROM BOOKINGS LIMIT 20;"
                               th:text="${executedSql}"></textarea>
                     <div class="run-row">
@@ -100,6 +100,11 @@
                 </div>
                 <div class="result-table">
                     <table>
+                        <thead th:if="${columns != null and !columns.isEmpty()}">
+                            <tr style="background:rgba(255,255,255,0.06);text-align:left;">
+                                <th th:each="col : ${columns}" th:text="${col}" style="padding:10px 14px;border-bottom:1px solid rgba(255,255,255,0.1);color:#00d2ff;font-weight:600;">Column</th>
+                            </tr>
+                        </thead>
                         <tbody>
                             <tr th:each="row : ${resultRows}">
                                 <td th:each="cell : ${row}" th:text="${cell}">-</td>

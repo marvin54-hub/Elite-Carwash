@@ -186,7 +186,7 @@
 
         <!-- ── Booking form (multi-step) ──────────────────────── -->
         <form id="bookingForm" action="/book" method="POST" class="booking-form">
-            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+            <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
             <!-- Hidden fields populated by JS -->
             <input type="hidden" name="yocoToken"     id="yocoTokenInput"     value="">
             <input type="hidden" name="paymentSkipped" id="paymentSkippedInput" value="false">
@@ -218,6 +218,27 @@
                             th:text="${svc.name + ' — R' + svc.price}"
                             th:attr="data-price=${svc.price}"></option>
                 </select>
+            </div>
+
+            <!-- Step 1.5: Optional Add-Ons -->
+            <div class="addon-section" th:if="${addOns != null and !addOns.isEmpty()}"
+                 style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);
+                        border-radius:12px;padding:14px;margin-bottom:16px;">
+                <div style="font-size:0.85rem;font-weight:700;color:#00d2ff;margin-bottom:10px;">
+                    ✨ Optional Add-On Services
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;">
+                    <label th:each="ao : ${addOns}" style="display:flex;align-items:flex-start;gap:8px;font-size:0.82rem;cursor:pointer;">
+                        <input type="checkbox" name="selectedAddOns" th:value="${ao.id}"
+                               th:attr="data-price=${ao.price},data-name=${ao.name}"
+                               onchange="updatePaySummary()" style="margin-top:3px;">
+                        <div>
+                            <span style="font-weight:600;" th:text="${ao.name}"></span>
+                            <span style="color:#00d2ff;font-weight:700;" th:text="' +R' + ${#numbers.formatDecimal(ao.price,1,0)}"></span>
+                            <div style="font-size:0.75rem;color:rgba(255,255,255,0.5);" th:text="${ao.description}"></div>
+                        </div>
+                    </label>
+                </div>
             </div>
 
             <!-- Weather widget (no API key needed — Open-Meteo) -->
@@ -387,10 +408,23 @@ function selectSlot(datetime, btn) {
 
 // ── Payment modal ─────────────────────────────────────────────────────────────
 function updatePaySummary() {
-    var sel   = document.getElementById('serviceSelect');
-    var opt   = sel.options[sel.selectedIndex];
-    selectedPrice = opt ? (parseFloat(opt.getAttribute('data-price')) || 0) : 0;
-    document.getElementById('sumService').textContent = opt && opt.value ? opt.text : '-';
+    var sel = document.getElementById('serviceSelect');
+    var opt = sel.options[sel.selectedIndex];
+    var basePrice = opt ? (parseFloat(opt.getAttribute('data-price')) || 0) : 0;
+
+    var addOnPrice = 0;
+    var addOnNames = [];
+    document.querySelectorAll('input[name="selectedAddOns"]:checked').forEach(function(cb) {
+        addOnPrice += parseFloat(cb.getAttribute('data-price')) || 0;
+        addOnNames.push(cb.getAttribute('data-name'));
+    });
+
+    selectedPrice = basePrice + addOnPrice;
+    var serviceText = opt && opt.value ? opt.text : '-';
+    if (addOnNames.length > 0) {
+        serviceText += ' + [' + addOnNames.join(', ') + ']';
+    }
+    document.getElementById('sumService').textContent = serviceText;
     document.getElementById('sumTime').textContent    = selectedSlotTime
         ? selectedSlotTime.replace('T', ' ') : 'Not selected';
     document.getElementById('sumPrice').textContent   = 'R' + selectedPrice.toFixed(2);

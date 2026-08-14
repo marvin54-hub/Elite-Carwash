@@ -18,6 +18,7 @@ public class CustomerService {
     @Autowired private BookingRepository   bookingRepository;
     @Autowired private NotificationService notificationService;
     @Autowired private PasswordEncoder     passwordEncoder;
+    @Autowired private com.witbank.carwash.repository.SupportTicketRepository ticketRepository;
 
     public static final int    REDEEM_THRESHOLD = 100;
     public static final double REDEEM_VALUE      = 50.0;
@@ -74,6 +75,10 @@ public class CustomerService {
         vehicleRepository.findById(vehicleId)
                 .filter(v -> v.getCustomerId().equals(customerId))
                 .ifPresent(vehicleRepository::delete);
+    }
+
+    public void saveVehicle(Vehicle vehicle) {
+        vehicleRepository.save(vehicle);
     }
 
     public Map<Long, String> getVehicleLabelsByBookings(List<Booking> bookings) {
@@ -158,5 +163,35 @@ public class CustomerService {
                     + " voucher. Code: " + code + ". Show at your next visit.");
             return c.getLoyaltyPoints();
         }).orElse(-1);
+    }
+
+    // ── Support Tickets ───────────────────────────────────────────────────────
+    public com.witbank.carwash.model.SupportTicket submitTicket(Long customerId, String name,
+                                                                 String phone, String email,
+                                                                 String subject, String message) {
+        var t = new com.witbank.carwash.model.SupportTicket(customerId, name.trim(), phone.trim(), email.trim(), subject.trim(), message.trim());
+        return ticketRepository.save(t);
+    }
+
+    public List<com.witbank.carwash.model.SupportTicket> getTicketsForCustomer(Long customerId) {
+        return ticketRepository.findByCustomerIdOrderBySubmittedAtDesc(customerId);
+    }
+
+    public List<com.witbank.carwash.model.SupportTicket> getAllTickets() {
+        return ticketRepository.findAllByOrderBySubmittedAtDesc();
+    }
+
+    public void respondToTicket(Long ticketId, String response) {
+        ticketRepository.findById(ticketId).ifPresent(t -> {
+            t.setAdminResponse(response.trim());
+            t.setStatus("Answered");
+            t.setRespondedAt(java.time.LocalDateTime.now());
+            ticketRepository.save(t);
+            if (t.getEmail() != null && !t.getEmail().isBlank()) {
+                notificationService.dispatchEmail(t.getEmail(),
+                        "Response to Support Enquiry #" + t.getId() + " – Witbank Elite",
+                        "Hi " + t.getCustomerName() + ",\n\nRe: " + t.getSubject() + "\n\nResponse:\n" + response);
+            }
+        });
     }
 }

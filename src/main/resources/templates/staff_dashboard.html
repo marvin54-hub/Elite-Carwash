@@ -42,14 +42,21 @@
         tr:last-child td{border-bottom:none}
         .badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:0.72rem;font-weight:700}
         .b-pending{background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.6)}
-        .b-progress{background:rgba(0,210,255,0.12);color:#00d2ff}
-        .b-complete{background:rgba(0,255,150,0.12);color:#4dffaa}
-        .b-cancel{background:rgba(255,77,77,0.12);color:#ff8080}
+        .b-confirmed{background:rgba(0,180,255,0.15);color:#38bdf8}
+        .b-received{background:rgba(168,85,247,0.15);color:#c084fc}
+        .b-progress{background:rgba(0,210,255,0.15);color:#00d2ff}
+        .b-quality{background:rgba(245,158,11,0.15);color:#fbbf24}
+        .b-complete{background:rgba(0,255,150,0.15);color:#4dffaa}
+        .b-collected{background:rgba(34,197,94,0.2);color:#22c55e}
+        .b-cancel{background:rgba(255,77,77,0.15);color:#ff8080}
         .b-paid{background:rgba(0,255,150,0.12);color:#4dffaa}
         .b-unpaid{background:rgba(255,170,0,0.12);color:#ffaa00}
         .verified-icon{color:#4dffaa;font-size:0.9rem}
         select.status-sel{background:rgba(255,255,255,0.06);border:1px solid var(--border);
                           color:#fff;border-radius:8px;padding:6px 10px;font-size:0.8rem;cursor:pointer}
+        select.status-sel option{background:#0f172a;color:#ffffff;padding:8px}
+        .note-input{background:rgba(0,0,0,0.3);border:1px solid var(--border);color:#fff;
+                    border-radius:6px;padding:4px 8px;font-size:0.75rem;width:150px;}
         .empty{text-align:center;padding:50px;color:var(--dim);font-size:0.9rem}
         .qr-link{color:var(--cyan);text-decoration:none;font-size:0.82rem;font-weight:600}
         .tabs{display:flex;gap:8px;margin-bottom:20px}
@@ -68,24 +75,24 @@
     </div>
     <div class="nav-actions">
         <span class="staff-badge">🧑‍🔧 STAFF</span>
-        <a href="/admin/verify" class="btn-sm btn-cyan">🔎 Verify QR</a>
-        <a href="/staff/logout" class="btn-sm btn-danger">Sign Out</a>
+        <a href="/staff/logout" class="btn-logout">Sign Out</a>
     </div>
 </div>
 
 <div class="container">
-
-    <!-- Welcome bar with availability toggle -->
-    <div class="welcome">
+    <div class="welcome-box">
         <div>
-            <h2 th:text="'Welcome, ' + ${staffUser.fullName}">Welcome</h2>
-            <div style="font-size:0.82rem;color:var(--dim);margin-top:4px;">
+            <h2>Hello, <span th:text="${staffUser.fullName}">Staff Member</span>! 👋</h2>
+            <p>Here are your assigned jobs for today.</p>
+        </div>
+        <div class="avail-toggle">
+            <div>
                 <span class="avail-dot" th:classappend="${staffUser.onLeave} ? 'dot-amber' : 'dot-green'"></span>
                 <span th:text="${staffUser.onLeave} ? ' Currently On Leave' : ' On Duty'"> On Duty</span>
             </div>
         </div>
         <form action="/staff/availability" method="POST" class="avail-form">
-            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+            <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
             <input type="hidden" name="onLeave" th:value="${!staffUser.onLeave}">
             <button type="submit" class="btn-sm" th:classappend="${staffUser.onLeave} ? 'btn-cyan' : 'btn-outline'">
                 <span th:text="${staffUser.onLeave} ? '✅ Go On Duty' : '🌴 Mark On Leave'">Toggle</span>
@@ -93,27 +100,35 @@
         </form>
     </div>
 
+    <!-- Quick verification shortcut -->
+    <div style="background:rgba(0,210,255,0.06);border:1px solid rgba(0,210,255,0.2);
+                border-radius:12px;padding:12px 18px;margin-bottom:24px;
+                display:flex;justify-content:space-between;align-items:center;">
+        <div>
+            <strong style="font-size:0.88rem;">🔎 Customer Arrival Verification</strong>
+            <span style="font-size:0.8rem;color:var(--dim);margin-left:10px;">Scan QR slips or type reference codes.</span>
+        </div>
+        <a href="/admin/verify" class="qr-link">Verify QR Slip →</a>
+    </div>
+
     <!-- Tabs -->
     <div class="tabs">
-        <button class="tab active" onclick="switchTab('assigned')">📋 My Assigned Bookings</button>
-        <button class="tab" onclick="switchTab('all')">📂 All Bookings</button>
+        <button class="tab active" onclick="switchTab('my', this)">My Assigned Jobs (<span th:text="${#lists.size(myBookings)}">0</span>)</button>
+        <button class="tab"        onclick="switchTab('all', this)">All Jobs Overview</button>
     </div>
 
     <!-- My Assigned Bookings -->
-    <div class="panel active" id="panel-assigned">
+    <div class="panel active" id="panel-my">
         <div class="card">
             <div class="card-header">
-                <span class="card-title">My Assigned Bookings</span>
+                <span class="card-title">My Assigned Jobs</span>
                 <span style="font-size:0.8rem;color:var(--dim);"
-                      th:text="${#lists.size(myBookings)} + ' booking(s)'">0</span>
+                      th:text="${#lists.size(myBookings)} + ' job(s)'">0</span>
             </div>
-            <div th:if="${#lists.isEmpty(myBookings)}" class="empty">
-                No bookings assigned to you yet.
-            </div>
+            <div th:if="${#lists.isEmpty(myBookings)}" class="empty">No jobs currently assigned to you.</div>
             <table th:unless="${#lists.isEmpty(myBookings)}">
                 <thead>
-                    <tr><th>Ref</th><th>Customer</th><th>Service</th><th>Date &amp; Time</th>
-                        <th>Vehicle</th><th>Payment</th><th>Status</th><th>Actions</th></tr>
+                    <tr><th>Ref</th><th>Customer</th><th>Service</th><th>Time</th><th>Vehicle</th><th>Payment</th><th>Status</th><th>Update Lifecycle &amp; Service Notes</th></tr>
                 </thead>
                 <tbody>
                     <tr th:each="b : ${myBookings}">
@@ -123,7 +138,7 @@
                             <div style="font-size:0.75rem;color:var(--dim);" th:text="${b.cellphone}">-</div>
                         </td>
                         <td th:text="${b.serviceType}">-</td>
-                        <td style="font-size:0.82rem;" th:text="${#temporals.format(b.bookingTime,'dd MMM yyyy, HH:mm')}">-</td>
+                        <td style="font-size:0.82rem;" th:text="${#temporals.format(b.bookingTime,'HH:mm')}">-</td>
                         <td style="font-size:0.8rem;color:var(--dim);"
                             th:text="${b.vehicleReg != null and !b.vehicleReg.isEmpty() ? b.vehicleReg : '—'}">—</td>
                         <td>
@@ -132,21 +147,69 @@
                         </td>
                         <td>
                             <span class="badge"
-                                  th:classappend="${b.status=='Completed'} ? 'b-complete' : ${b.status=='In Progress'} ? 'b-progress' : ${b.status=='Cancelled'} ? 'b-cancel' : 'b-pending'"
+                                  th:classappend="${b.status=='Confirmed' ? 'b-confirmed' : b.status=='Vehicle Received' ? 'b-received' : (b.status=='In Progress' or b.status=='Washing') ? 'b-progress' : b.status=='Quality Check' ? 'b-quality' : b.status=='Completed' ? 'b-complete' : b.status=='Vehicle Collected' ? 'b-collected' : b.status=='Cancelled' ? 'b-cancel' : 'b-pending'}"
                                   th:text="${b.status}">-</span>
                             <span th:if="${b.verified}" class="verified-icon" title="QR Verified">✓</span>
+                            <div th:if="${b.serviceNotes != null and !b.serviceNotes.isEmpty()}" style="font-size:0.72rem;color:var(--cyan);margin-top:4px;" th:text="'📝 ' + ${b.serviceNotes}"></div>
                         </td>
                         <td>
-                            <form action="/staff/bookings/update-status" method="POST" style="display:flex;gap:6px;align-items:center;">
-                                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                            <form action="/staff/bookings/update-status" method="POST" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+                                <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
                                 <input type="hidden" name="id" th:value="${b.id}">
-                                <select name="status" class="status-sel" onchange="this.form.submit()">
-                                    <option th:selected="${b.status=='Pending'}"     value="Pending">Pending</option>
-                                    <option th:selected="${b.status=='In Progress'}" value="In Progress">In Progress</option>
-                                    <option th:selected="${b.status=='Completed'}"   value="Completed">Completed</option>
-                                    <option th:selected="${b.status=='Cancelled'}"   value="Cancelled">Cancelled</option>
+                                <select name="status" class="status-sel">
+                                    <option th:selected="${b.status=='Pending'}"          value="Pending">1. Pending</option>
+                                    <option th:selected="${b.status=='Confirmed'}"        value="Confirmed">2. Confirmed</option>
+                                    <option th:selected="${b.status=='Vehicle Received'}" value="Vehicle Received">3. Vehicle Received</option>
+                                    <option th:selected="${b.status=='Washing' or b.status=='In Progress'}" value="Washing">4. Washing</option>
+                                    <option th:selected="${b.status=='Quality Check'}"    value="Quality Check">5. Quality Check</option>
+                                    <option th:selected="${b.status=='Completed'}"        value="Completed">6. Completed</option>
+                                    <option th:selected="${b.status=='Vehicle Collected'}" value="Vehicle Collected">7. Vehicle Collected</option>
+                                    <option th:selected="${b.status=='Cancelled'}"        value="Cancelled">✕ Cancelled</option>
                                 </select>
+                                <input type="text" name="serviceNotes" placeholder="Service notes…" class="note-input" th:value="${b.serviceNotes}">
+                                <button type="submit" class="btn-sm btn-cyan" style="padding:4px 10px;">Save</button>
                             </form>
+
+                            <!-- Pre-Wash Inspection quick form -->
+                            <details style="margin-top:8px;background:rgba(0,0,0,0.2);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:8px;">
+                                <summary style="font-size:0.75rem;font-weight:700;color:var(--cyan);cursor:pointer;">
+                                    🔍 <span th:text="${inspectionsMap.get(b.id) != null ? 'Edit Inspection (' + inspectionsMap.get(b.id).conditionRating + ')' : 'Pre-Wash Inspection Log'}">Pre-Wash Inspection Log</span>
+                                </summary>
+                                <form action="/staff/inspection/save" method="POST" enctype="multipart/form-data" style="margin-top:8px;display:flex;flex-direction:column;gap:6px;">
+                                    <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                                    <input type="hidden" name="bookingId" th:value="${b.id}">
+                                    <input type="hidden" name="vehicleReg" th:value="${b.vehicleReg}">
+                                    
+                                    <div style="display:flex;gap:6px;align-items:center;">
+                                        <label style="font-size:0.72rem;color:var(--dim);">Condition:</label>
+                                        <select name="conditionRating" class="status-sel" style="padding:3px 6px;font-size:0.75rem;">
+                                            <option value="Good"                      th:selected="${inspectionsMap.get(b.id)?.conditionRating == 'Good'}">Good Condition</option>
+                                            <option value="Fair"                      th:selected="${inspectionsMap.get(b.id)?.conditionRating == 'Fair'}">Fair Condition</option>
+                                            <option value="Heavy Dirt / Mud"         th:selected="${inspectionsMap.get(b.id)?.conditionRating == 'Heavy Dirt / Mud'}">Heavy Dirt / Mud</option>
+                                            <option value="Pre-existing Scratches"    th:selected="${inspectionsMap.get(b.id)?.conditionRating == 'Pre-existing Scratches'}">Pre-existing Scratches</option>
+                                            <option value="Pre-existing Dents/Damage" th:selected="${inspectionsMap.get(b.id)?.conditionRating == 'Pre-existing Dents/Damage'}">Pre-existing Dents/Damage</option>
+                                        </select>
+                                    </div>
+                                    <input type="text" name="existingDamageNotes" placeholder="Damage/scratch details…" class="note-input" style="width:100%;"
+                                           th:value="${inspectionsMap.get(b.id)?.existingDamageNotes}">
+
+                                    <div style="display:flex;flex-direction:column;gap:4px;">
+                                        <label style="font-size:0.72rem;color:var(--cyan);font-weight:600;">📷 Upload Photo Image:</label>
+                                        <input type="file" name="imageFile" accept="image/*" class="note-input" style="width:100%;font-size:0.75rem;padding:2px 4px;">
+                                        <input type="text" name="photoUrls" placeholder="Or enter Photo URL / Reference…" class="note-input" style="width:100%;font-size:0.72rem;"
+                                               th:value="${inspectionsMap.get(b.id)?.photoUrls}">
+                                    </div>
+
+                                    <div th:if="${inspectionsMap.get(b.id)?.photoUrls != null and !inspectionsMap.get(b.id)?.photoUrls.isEmpty()}" style="margin-top:4px;">
+                                        <div style="font-size:0.7rem;color:var(--dim);">Attached Damage Photo:</div>
+                                        <a th:href="${inspectionsMap.get(b.id).photoUrls}" target="_blank">
+                                            <img th:src="${inspectionsMap.get(b.id).photoUrls}" style="max-height:70px;border-radius:6px;border:1px solid rgba(0,210,255,0.4);margin-top:2px;object-fit:cover;">
+                                        </a>
+                                    </div>
+
+                                    <button type="submit" class="btn-sm btn-cyan" style="padding:4px 10px;font-size:0.75rem;align-self:flex-start;margin-top:4px;">💾 Save Inspection &amp; Photo</button>
+                                </form>
+                            </details>
                         </td>
                     </tr>
                 </tbody>
@@ -158,14 +221,14 @@
     <div class="panel" id="panel-all">
         <div class="card">
             <div class="card-header">
-                <span class="card-title">All Bookings Overview</span>
+                <span class="card-title">All Jobs Overview</span>
                 <span style="font-size:0.8rem;color:var(--dim);"
                       th:text="${#lists.size(allBookings)} + ' total'">0</span>
             </div>
             <div th:if="${#lists.isEmpty(allBookings)}" class="empty">No bookings in the system yet.</div>
             <table th:unless="${#lists.isEmpty(allBookings)}">
                 <thead>
-                    <tr><th>Ref</th><th>Customer</th><th>Service</th><th>Date &amp; Time</th><th>Status</th><th>Verified</th></tr>
+                    <tr><th>Ref</th><th>Customer</th><th>Service</th><th>Date &amp; Time</th><th>Status</th><th>Notes</th><th>Verified</th></tr>
                 </thead>
                 <tbody>
                     <tr th:each="b : ${allBookings}">
@@ -174,8 +237,9 @@
                         <td th:text="${b.serviceType}">-</td>
                         <td style="font-size:0.82rem;" th:text="${#temporals.format(b.bookingTime,'dd MMM yyyy, HH:mm')}">-</td>
                         <td><span class="badge"
-                                  th:classappend="${b.status=='Completed'} ? 'b-complete' : ${b.status=='In Progress'} ? 'b-progress' : ${b.status=='Cancelled'} ? 'b-cancel' : 'b-pending'"
+                                  th:classappend="${b.status=='Confirmed' ? 'b-confirmed' : b.status=='Vehicle Received' ? 'b-received' : (b.status=='In Progress' or b.status=='Washing') ? 'b-progress' : b.status=='Quality Check' ? 'b-quality' : b.status=='Completed' ? 'b-complete' : b.status=='Vehicle Collected' ? 'b-collected' : b.status=='Cancelled' ? 'b-cancel' : 'b-pending'}"
                                   th:text="${b.status}">-</span></td>
+                        <td style="font-size:0.78rem;color:var(--dim);" th:text="${b.serviceNotes ?: '—'}">—</td>
                         <td><span th:if="${b.verified}" style="color:#4dffaa;">✓ Yes</span>
                             <span th:unless="${b.verified}" style="color:var(--dim);">—</span></td>
                     </tr>
