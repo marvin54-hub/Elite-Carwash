@@ -113,4 +113,36 @@ public class Booking {
     public boolean isPaid() {
         return paymentStatus != null && paymentStatus.toLowerCase().contains("paid");
     }
+
+    /** Returns stage number (1 to 7) or -1 for Cancelled. */
+    public int getStatusStageIndex() {
+        if (status == null) return 1;
+        switch (status.trim()) {
+            case "Confirmed": return 2;
+            case "Vehicle Received": return 3;
+            case "In Progress":
+            case "Washing": return 4;
+            case "Quality Check": return 5;
+            case "Completed": return 6;
+            case "Vehicle Collected": return 7;
+            case "Cancelled": return -1;
+            default: return 1; // Pending
+        }
+    }
+
+    /** Returns status emoji icon. */
+    public String getStatusIcon() {
+        if (status == null) return "⌛";
+        switch (status.trim()) {
+            case "Confirmed": return "📅";
+            case "Vehicle Received": return "🔑";
+            case "In Progress":
+            case "Washing": return "🧼";
+            case "Quality Check": return "✨";
+            case "Completed": return "🎉";
+            case "Vehicle Collected": return "🚗";
+            case "Cancelled": return "✕";
+            default: return "⌛";
+        }
+    }
 }

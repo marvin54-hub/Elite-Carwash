@@ -71,6 +71,20 @@
                    border:1px solid rgba(0,210,255,0.25);border-radius:18px;padding:36px;text-align:center}
         .book-hero h3{font-size:1.3rem;margin-bottom:8px}
         .book-hero p{color:var(--dim);font-size:0.9rem;margin-bottom:22px}
+        /* ── Stepper Progress Bar ── */
+        .step-node{flex:1;text-align:center;position:relative}
+        .step-dot{width:18px;height:18px;border-radius:50%;background:rgba(255,255,255,0.1);
+                  border:2px solid rgba(255,255,255,0.2);margin:0 auto;display:flex;
+                  align-items:center;justify-content:center;font-size:0.65rem;transition:0.2s}
+        .step-node.completed .step-dot{background:#00d2ff;border-color:#00d2ff;color:#000;font-weight:bold}
+        .step-node.current .step-dot{background:#ffaa00;border-color:#ffaa00;color:#000;
+                                     box-shadow:0 0 10px rgba(255,170,0,0.8);animation:pulse 1.5s infinite}
+        .step-label{font-size:0.6rem;color:var(--dim);margin-top:3px;white-space:nowrap}
+        .step-node.current .step-label{color:#ffaa00;font-weight:700}
+        .step-node.completed .step-label{color:#00d2ff}
+        .step-line{flex:1;height:2px;background:rgba(255,255,255,0.1)}
+        .step-line.active{background:#00d2ff}
+        @keyframes pulse{0%{transform:scale(1)}50%{transform:scale(1.2)}100%{transform:scale(1)}}
         @media(max-width:700px){.dash-wrap{flex-direction:column}.sidebar{width:100%}.field-grid{grid-template-columns:1fr}}
     </style>
 </head>
@@ -298,10 +312,62 @@
                             <td style="font-size:0.82rem;" th:text="${#temporals.format(b.bookingTime,'dd MMM yyyy, HH:mm')}">-</td>
                             <td th:text="${'R'+#numbers.formatDecimal(b.price,1,2)}">R0</td>
                             <td>
+                                <!-- Status badge with icon -->
                                 <span class="badge"
-                                      th:classappend="${b.status=='Completed' or b.status=='Vehicle Collected' ? 'b-done' : b.status=='Cancelled' ? 'b-cancel' : 'b-pend'}"
-                                      th:text="${b.status}">-</span>
-                                <div th:if="${b.serviceNotes != null and !b.serviceNotes.isEmpty()}" style="font-size:0.72rem;color:var(--cyan);margin-top:3px;" th:text="'📝 ' + ${b.serviceNotes}"></div>
+                                      th:classappend="${b.status=='Completed' or b.status=='Vehicle Collected' ? 'b-done' : b.status=='Cancelled' ? 'b-cancel' : (b.status=='Washing' or b.status=='In Progress') ? 'b-done' : 'b-pend'}"
+                                      th:text="${b.statusIcon + ' ' + b.status}">-</span>
+
+                                <!-- Visual Stepper Progress Bar (if not cancelled) -->
+                                <div th:if="${b.status != 'Cancelled'}" style="margin-top:8px;background:rgba(0,0,0,0.25);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:8px 10px;min-width:320px;">
+                                    <div style="display:flex;justify-content:space-between;font-size:0.7rem;font-weight:700;color:var(--cyan);margin-bottom:6px;">
+                                        <span>LIVE WASH STAGE</span>
+                                        <span th:text="'Stage ' + ${b.statusStageIndex} + ' of 7'">Stage 1 of 7</span>
+                                    </div>
+                                    <div style="display:flex;align-items:center;justify-content:space-between;gap:2px;">
+                                        <div class="step-node" th:classappend="${b.statusStageIndex > 1 ? 'completed' : (b.statusStageIndex == 1 ? 'current' : '')}" title="Pending">
+                                            <div class="step-dot"><span th:text="${b.statusStageIndex > 1 ? '✓' : '1'}">1</span></div>
+                                            <div class="step-label">Pending</div>
+                                        </div>
+                                        <div class="step-line" th:classappend="${b.statusStageIndex > 1 ? 'active' : ''}"></div>
+
+                                        <div class="step-node" th:classappend="${b.statusStageIndex > 2 ? 'completed' : (b.statusStageIndex == 2 ? 'current' : '')}" title="Confirmed">
+                                            <div class="step-dot"><span th:text="${b.statusStageIndex > 2 ? '✓' : '2'}">2</span></div>
+                                            <div class="step-label">Confirmed</div>
+                                        </div>
+                                        <div class="step-line" th:classappend="${b.statusStageIndex > 2 ? 'active' : ''}"></div>
+
+                                        <div class="step-node" th:classappend="${b.statusStageIndex > 3 ? 'completed' : (b.statusStageIndex == 3 ? 'current' : '')}" title="Received">
+                                            <div class="step-dot"><span th:text="${b.statusStageIndex > 3 ? '✓' : '3'}">3</span></div>
+                                            <div class="step-label">Received</div>
+                                        </div>
+                                        <div class="step-line" th:classappend="${b.statusStageIndex > 3 ? 'active' : ''}"></div>
+
+                                        <div class="step-node" th:classappend="${b.statusStageIndex > 4 ? 'completed' : (b.statusStageIndex == 4 ? 'current' : '')}" title="Washing">
+                                            <div class="step-dot"><span th:text="${b.statusStageIndex > 4 ? '✓' : '4'}">4</span></div>
+                                            <div class="step-label">Washing</div>
+                                        </div>
+                                        <div class="step-line" th:classappend="${b.statusStageIndex > 4 ? 'active' : ''}"></div>
+
+                                        <div class="step-node" th:classappend="${b.statusStageIndex > 5 ? 'completed' : (b.statusStageIndex == 5 ? 'current' : '')}" title="Quality Check">
+                                            <div class="step-dot"><span th:text="${b.statusStageIndex > 5 ? '✓' : '5'}">5</span></div>
+                                            <div class="step-label">Quality</div>
+                                        </div>
+                                        <div class="step-line" th:classappend="${b.statusStageIndex > 5 ? 'active' : ''}"></div>
+
+                                        <div class="step-node" th:classappend="${b.statusStageIndex > 6 ? 'completed' : (b.statusStageIndex == 6 ? 'current' : '')}" title="Ready for Collection">
+                                            <div class="step-dot"><span th:text="${b.statusStageIndex > 6 ? '✓' : '6'}">6</span></div>
+                                            <div class="step-label">Ready</div>
+                                        </div>
+                                        <div class="step-line" th:classappend="${b.statusStageIndex > 6 ? 'active' : ''}"></div>
+
+                                        <div class="step-node" th:classappend="${b.statusStageIndex == 7 ? 'completed' : ''}" title="Vehicle Collected">
+                                            <div class="step-dot"><span th:text="${b.statusStageIndex == 7 ? '✓' : '7'}">7</span></div>
+                                            <div class="step-label">Collected</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div th:if="${b.serviceNotes != null and !b.serviceNotes.isEmpty()}" style="font-size:0.72rem;color:var(--cyan);margin-top:5px;" th:text="'📝 Staff Note: ' + ${b.serviceNotes}"></div>
                                 <div th:if="${inspectionsMap != null and inspectionsMap.get(b.id) != null}" style="font-size:0.72rem;color:rgba(255,255,255,0.6);margin-top:3px;">
                                     🔍 Vehicle Inspection: <strong style="color:#00d2ff;" th:text="${inspectionsMap.get(b.id).conditionRating}">Good</strong>
                                     <span th:if="${inspectionsMap.get(b.id).existingDamageNotes != null and !inspectionsMap.get(b.id).existingDamageNotes.isEmpty()}"

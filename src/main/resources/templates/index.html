@@ -71,6 +71,21 @@
                            font-size:0.78rem; font-weight:700; }
         .pay-paid   { background:rgba(77,255,77,0.12);  color:#4dff4d; }
         .pay-arrival { background:rgba(255,170,0,0.12); color:#ffaa00; }
+
+        /* ── Stepper Progress Bar ── */
+        .step-node{flex:1;text-align:center;position:relative;min-width:45px}
+        .step-dot{width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,0.1);
+                  border:2px solid rgba(255,255,255,0.2);margin:0 auto;display:flex;
+                  align-items:center;justify-content:center;font-size:0.75rem;transition:0.2s}
+        .step-node.completed .step-dot{background:#00d2ff;border-color:#00d2ff;color:#000;font-weight:bold}
+        .step-node.current .step-dot{background:#ffaa00;border-color:#ffaa00;color:#000;
+                                     box-shadow:0 0 12px rgba(255,170,0,0.8);animation:pulse 1.5s infinite}
+        .step-label{font-size:0.68rem;color:rgba(255,255,255,0.5);margin-top:4px;white-space:nowrap}
+        .step-node.current .step-label{color:#ffaa00;font-weight:700}
+        .step-node.completed .step-label{color:#00d2ff}
+        .step-line{flex:1;height:2px;background:rgba(255,255,255,0.1);min-width:15px}
+        .step-line.active{background:#00d2ff}
+        @keyframes pulse{0%{transform:scale(1)}50%{transform:scale(1.2)}100%{transform:scale(1)}}
     </style>
 </head>
 <body>
@@ -81,6 +96,7 @@
     <ul class="nav-links">
         <li><a href="#services">Services</a></li>
         <li><a href="#booking">Book Now</a></li>
+        <li><a href="#track-section" style="color:#ffaa00;">🔍 Track Wash Status</a></li>
         <li th:if="${loggedInCustomer != null}">
             <a href="/customer/dashboard" style="color:#00d2ff;">
                 👤 <span th:text="${loggedInCustomer.fullName.split(' ')[0]}">Me</span>
@@ -102,7 +118,92 @@
         <p class="animate-up delay-1">Witbank's premier automotive spa experience.</p>
         <div class="hero-btns animate-up delay-2">
             <a href="#booking" class="btn btn-primary">Book an Appointment</a>
-            <a href="#services" class="btn btn-outline">View Packages</a>
+            <a href="#track-section" class="btn btn-outline" style="border-color:#00d2ff;color:#00d2ff;">🔍 Track Wash Status</a>
+        </div>
+    </div>
+</section>
+
+<!-- ── Live Track Section ────────────────────────────────────── -->
+<section id="track-section" style="padding:60px 20px;max-width:900px;margin:0 auto;">
+    <div class="glass" style="padding:30px;border-radius:20px;text-align:center;">
+        <h2 style="font-size:1.5rem;margin-bottom:8px;">🔎 Track Your <span>Vehicle Status</span></h2>
+        <p style="color:rgba(255,255,255,0.6);font-size:0.9rem;margin-bottom:20px;">
+            Enter your Booking Reference (e.g. <strong>WE-1</strong>), Registration number, or Cellphone.
+        </p>
+
+        <form action="/track#track-section" method="GET" style="display:flex;gap:10px;justify-content:center;max-width:500px;margin:0 auto 20px;flex-wrap:wrap;">
+            <input type="text" name="ref" placeholder="Enter Ref #WE-1, Reg or Cellphone…"
+                   style="padding:12px 18px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);border-radius:12px;color:#fff;font-family:'Outfit',sans-serif;font-size:0.95rem;flex:1;min-width:220px;"
+                   th:value="${param.ref}">
+            <button type="submit" class="btn btn-primary" style="padding:12px 24px;">Track Now</button>
+        </form>
+
+        <!-- Track Error -->
+        <div th:if="${trackError}" style="background:rgba(255,77,77,0.1);border:1px solid rgba(255,77,77,0.3);color:#ff8080;padding:12px;border-radius:12px;margin-top:14px;" th:text="${trackError}"></div>
+
+        <!-- Tracked Result Card -->
+        <div th:if="${trackedBooking != null}" style="background:rgba(0,0,0,0.3);border:1px solid rgba(0,210,255,0.3);border-radius:16px;padding:24px;margin-top:20px;text-align:left;">
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;border-bottom:1px solid rgba(255,255,255,0.1);padding-bottom:12px;margin-bottom:16px;">
+                <div>
+                    <h3 style="font-size:1.1rem;color:#00d2ff;" th:text="${'Ref: #WE-' + trackedBooking.id + ' · ' + trackedBooking.serviceType}">Ref #WE-1</h3>
+                    <div style="font-size:0.85rem;color:rgba(255,255,255,0.6);" th:text="${'Customer: ' + trackedBooking.customerName + ' | Vehicle: ' + (trackedBooking.vehicleReg != null and !trackedBooking.vehicleReg.isEmpty() ? trackedBooking.vehicleReg : 'N/A')}">Details</div>
+                </div>
+                <span class="pay-status-chip" style="background:rgba(0,210,255,0.15);color:#00d2ff;font-size:0.9rem;" th:text="${trackedBooking.statusIcon + ' ' + trackedBooking.status}">Status</span>
+            </div>
+
+            <!-- Stepper Progress Bar -->
+            <div th:if="${trackedBooking.status != 'Cancelled'}" style="margin-top:12px;">
+                <div style="display:flex;justify-content:space-between;font-size:0.8rem;font-weight:700;color:#00d2ff;margin-bottom:10px;">
+                    <span>CURRENT WASH STAGE</span>
+                    <span th:text="'Stage ' + ${trackedBooking.statusStageIndex} + ' of 7'">Stage 1 of 7</span>
+                </div>
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:2px;overflow-x:auto;padding-bottom:10px;">
+                    <div class="step-node" th:classappend="${trackedBooking.statusStageIndex > 1 ? 'completed' : (trackedBooking.statusStageIndex == 1 ? 'current' : '')}">
+                        <div class="step-dot"><span th:text="${trackedBooking.statusStageIndex > 1 ? '✓' : '1'}">1</span></div>
+                        <div class="step-label">Pending</div>
+                    </div>
+                    <div class="step-line" th:classappend="${trackedBooking.statusStageIndex > 1 ? 'active' : ''}"></div>
+
+                    <div class="step-node" th:classappend="${trackedBooking.statusStageIndex > 2 ? 'completed' : (trackedBooking.statusStageIndex == 2 ? 'current' : '')}">
+                        <div class="step-dot"><span th:text="${trackedBooking.statusStageIndex > 2 ? '✓' : '2'}">2</span></div>
+                        <div class="step-label">Confirmed</div>
+                    </div>
+                    <div class="step-line" th:classappend="${trackedBooking.statusStageIndex > 2 ? 'active' : ''}"></div>
+
+                    <div class="step-node" th:classappend="${trackedBooking.statusStageIndex > 3 ? 'completed' : (trackedBooking.statusStageIndex == 3 ? 'current' : '')}">
+                        <div class="step-dot"><span th:text="${trackedBooking.statusStageIndex > 3 ? '✓' : '3'}">3</span></div>
+                        <div class="step-label">Received</div>
+                    </div>
+                    <div class="step-line" th:classappend="${trackedBooking.statusStageIndex > 3 ? 'active' : ''}"></div>
+
+                    <div class="step-node" th:classappend="${trackedBooking.statusStageIndex > 4 ? 'completed' : (trackedBooking.statusStageIndex == 4 ? 'current' : '')}">
+                        <div class="step-dot"><span th:text="${trackedBooking.statusStageIndex > 4 ? '✓' : '4'}">4</span></div>
+                        <div class="step-label">Washing</div>
+                    </div>
+                    <div class="step-line" th:classappend="${trackedBooking.statusStageIndex > 4 ? 'active' : ''}"></div>
+
+                    <div class="step-node" th:classappend="${trackedBooking.statusStageIndex > 5 ? 'completed' : (trackedBooking.statusStageIndex == 5 ? 'current' : '')}">
+                        <div class="step-dot"><span th:text="${trackedBooking.statusStageIndex > 5 ? '✓' : '5'}">5</span></div>
+                        <div class="step-label">Quality</div>
+                    </div>
+                    <div class="step-line" th:classappend="${trackedBooking.statusStageIndex > 5 ? 'active' : ''}"></div>
+
+                    <div class="step-node" th:classappend="${trackedBooking.statusStageIndex > 6 ? 'completed' : (trackedBooking.statusStageIndex == 6 ? 'current' : '')}">
+                        <div class="step-dot"><span th:text="${trackedBooking.statusStageIndex > 6 ? '✓' : '6'}">6</span></div>
+                        <div class="step-label">Ready</div>
+                    </div>
+                    <div class="step-line" th:classappend="${trackedBooking.statusStageIndex > 6 ? 'active' : ''}"></div>
+
+                    <div class="step-node" th:classappend="${trackedBooking.statusStageIndex == 7 ? 'completed' : ''}">
+                        <div class="step-dot"><span th:text="${trackedBooking.statusStageIndex == 7 ? '✓' : '7'}">7</span></div>
+                        <div class="step-label">Collected</div>
+                    </div>
+                </div>
+            </div>
+
+            <div th:if="${trackedBooking.serviceNotes != null and !trackedBooking.serviceNotes.isEmpty()}" style="margin-top:14px;font-size:0.85rem;color:#00d2ff;">
+                📝 Staff Notes: <span style="color:#fff;" th:text="${trackedBooking.serviceNotes}">Notes</span>
+            </div>
         </div>
     </div>
 </section>

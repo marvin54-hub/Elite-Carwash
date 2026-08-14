@@ -281,4 +281,45 @@ public class BookingController {
         }
         return "vehicle_history";
     }
+
+    // ── Live status tracker lookup ────────────────────────────────────────────
+    @GetMapping("/track")
+    public String trackPage(@RequestParam(required = false) String ref, Model model, HttpSession session) {
+        commonModel(model, session);
+        if (ref != null && !ref.isBlank()) {
+            String query = ref.trim().toUpperCase().replace("WE-", "");
+            var found = bookingService.getAllBookings().stream()
+                    .filter(b -> b.getId().toString().equals(query)
+                              || query.equalsIgnoreCase(b.getVehicleReg())
+                              || query.equals(b.getCellphone()))
+                    .findFirst();
+            found.ifPresent(b -> model.addAttribute("trackedBooking", b));
+            if (found.isEmpty()) model.addAttribute("trackError", "No active booking found matching '" + ref + "'");
+        }
+        return "index";
+    }
+
+    @GetMapping("/api/booking/status/{id}")
+    @ResponseBody
+    public Map<String, Object> liveBookingStatus(@PathVariable Long id) {
+        return bookingService.getAllBookings().stream()
+                .filter(b -> b.getId().equals(id))
+                .findFirst()
+                .map(b -> {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("id", b.getId());
+                    map.put("ref", "WE-" + b.getId());
+                    map.put("status", b.getStatus());
+                    map.put("stageIndex", b.getStatusStageIndex());
+                    map.put("statusIcon", b.getStatusIcon());
+                    map.put("customerName", b.getCustomerName());
+                    map.put("serviceType", b.getServiceType());
+                    map.put("bookingTime", b.getBookingTime().toString());
+                    map.put("vehicleReg", b.getVehicleReg() != null ? b.getVehicleReg() : "");
+                    map.put("serviceNotes", b.getServiceNotes() != null ? b.getServiceNotes() : "");
+                    map.put("paid", b.isPaid());
+                    return map;
+                })
+                .orElse(Map.of("error", "Booking not found"));
+    }
 }
