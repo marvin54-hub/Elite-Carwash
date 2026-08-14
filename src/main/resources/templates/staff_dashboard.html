@@ -228,7 +228,7 @@
             <div th:if="${#lists.isEmpty(allBookings)}" class="empty">No bookings in the system yet.</div>
             <table th:unless="${#lists.isEmpty(allBookings)}">
                 <thead>
-                    <tr><th>Ref</th><th>Customer</th><th>Service</th><th>Date &amp; Time</th><th>Status</th><th>Notes</th><th>Verified</th></tr>
+                    <tr><th>Ref</th><th>Customer</th><th>Service</th><th>Date &amp; Time</th><th>Status</th><th>Notes</th><th>Verified</th><th>Assignment Action</th></tr>
                 </thead>
                 <tbody>
                     <tr th:each="b : ${allBookings}">
@@ -242,6 +242,17 @@
                         <td style="font-size:0.78rem;color:var(--dim);" th:text="${b.serviceNotes ?: '—'}">—</td>
                         <td><span th:if="${b.verified}" style="color:#4dffaa;">✓ Yes</span>
                             <span th:unless="${b.verified}" style="color:var(--dim);">—</span></td>
+                        <td>
+                            <form action="/staff/bookings/claim" method="POST" style="margin:0;">
+                                <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                                <input type="hidden" name="id" th:value="${b.id}">
+                                <button type="submit" class="btn-sm btn-cyan" style="padding:4px 10px;"
+                                        th:if="${b.assignedStaffId == null}">✋ Claim Job</button>
+                                <button type="submit" class="btn-sm btn-outline" style="padding:4px 10px;font-size:0.75rem;"
+                                        th:if="${b.assignedStaffId != null and b.assignedStaffId != staffUser.id}">Reassign to Me</button>
+                                <span th:if="${b.assignedStaffId == staffUser.id}" style="color:#4dffaa;font-size:0.8rem;font-weight:700;">✓ Assigned to You</span>
+                            </form>
+                        </td>
                     </tr>
                 </tbody>
             </table>

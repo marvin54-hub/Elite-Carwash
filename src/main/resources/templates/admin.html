@@ -256,7 +256,7 @@
     <div class="p-card">
       <div class="p-table-wrap">
         <table class="p-table">
-          <thead><tr><th>Customer</th><th>Vehicle</th><th>Contact</th><th>Service</th><th>Date &amp; Time</th><th>Price</th><th>Status</th><th>Payment</th><th>Notify</th><th>Actions</th></tr></thead>
+          <thead><tr><th>Customer</th><th>Vehicle</th><th>Contact</th><th>Service</th><th>Date &amp; Time</th><th>Price</th><th>Assigned Staff</th><th>Status</th><th>Payment</th><th>Notify</th><th>Actions</th></tr></thead>
           <tbody>
           <tr th:each="b : ${bookings}">
             <td>
@@ -274,6 +274,19 @@
             <td th:text="${b.serviceType}">-</td>
             <td th:text="${#temporals.format(b.bookingTime,'dd MMM yyyy, HH:mm')}" style="white-space:nowrap;">-</td>
             <td th:text="${'R' + #numbers.formatDecimal(b.price,1,2)}">-</td>
+            <td>
+              <form action="/admin/bookings/assign" method="POST" style="margin:0;">
+                <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                <input type="hidden" name="id" th:value="${b.id}">
+                <select name="staffId" onchange="this.form.submit()" class="status-sel" style="background:rgba(255,255,255,0.06);border:1px solid var(--p-border);color:#fff;border-radius:6px;padding:4px 8px;font-size:0.78rem;">
+                  <option value="">-- Unassigned --</option>
+                  <option th:each="st : ${allStaff}"
+                          th:value="${st.id}"
+                          th:text="${st.fullName}"
+                          th:selected="${b.assignedStaffId == st.id}">Staff Member</option>
+                </select>
+              </form>
+            </td>
             <td>
               <form action="/admin/bookings/update-status" method="POST" style="margin:0;">
             <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>

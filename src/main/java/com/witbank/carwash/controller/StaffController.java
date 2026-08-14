@@ -45,6 +45,14 @@ public class StaffController {
         return "redirect:/staff/dashboard#bookings";
     }
 
+    @PostMapping("/bookings/claim")
+    public String claimBooking(@RequestParam Long id, HttpSession session) {
+        if (notStaff(session)) return "redirect:/staff/login";
+        Staff staff = me(session);
+        bookingService.assignStaff(id, staff.getId());
+        return "redirect:/staff/dashboard";
+    }
+
     @PostMapping("/inspection/save")
     public String saveInspection(@RequestParam Long bookingId,
                                  @RequestParam(required = false, defaultValue = "") String vehicleReg,
